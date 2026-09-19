@@ -156,4 +156,46 @@ struct LaunchesViewModelTests {
         #expect(viewModel.launches.map(\.id) == ["recovered"])
         #expect(viewModel.errorMessage == nil)
     }
+
+    @Test func appliesAndClearsDateFilter() async {
+        let service = ControllableSpaceXService()
+        service.launchesPages = [
+            1: .fixture(docs: [Launch.fixture(id: "all")], page: 1, hasNextPage: false)
+        ]
+
+        let viewModel = LaunchesViewModel(service: service)
+        await viewModel.loadInitial()
+
+        service.launchesPages = [
+            1: .fixture(docs: [Launch.fixture(id: "filtered")], page: 1, hasNextPage: false)
+        ]
+        viewModel.draftStartDate = Date(timeIntervalSince1970: 1_600_000_000)
+        viewModel.draftEndDate = Date(timeIntervalSince1970: 1_700_000_000)
+        await viewModel.applyFilter()
+
+        #expect(viewModel.hasActiveFilter)
+        #expect(viewModel.launches.map(\.id) == ["filtered"])
+        #expect(service.lastStartDate != nil)
+        #expect(service.lastEndDate != nil)
+
+        service.launchesPages = [
+            1: .fixture(docs: [Launch.fixture(id: "cleared")], page: 1, hasNextPage: false)
+        ]
+        await viewModel.clearFilter()
+
+        #expect(viewModel.hasActiveFilter == false)
+        #expect(viewModel.launches.map(\.id) == ["cleared"])
+        #expect(service.lastStartDate == nil)
+        #expect(service.lastEndDate == nil)
+    }
+
+    @Test func rejectsInvalidDraftFilterRange() async {
+        let viewModel = LaunchesViewModel(service: ControllableSpaceXService())
+        viewModel.draftStartDate = Date(timeIntervalSince1970: 2_000_000_000)
+        viewModel.draftEndDate = Date(timeIntervalSince1970: 1_000_000_000)
+
+        #expect(viewModel.canApplyDraftFilter == false)
+        await viewModel.applyFilter()
+        #expect(viewModel.hasActiveFilter == false)
+    }
 }

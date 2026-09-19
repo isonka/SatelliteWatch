@@ -9,7 +9,19 @@ struct MockSpaceXService: SpaceXServiceProtocol {
         startDate: Date?,
         endDate: Date?
     ) async throws -> PaginatedResponse<Launch> {
-        let docs = Self.sampleLaunches
+        var docs = Self.sampleLaunches
+        let calendar = Calendar.current
+
+        if let startDate {
+            let start = calendar.startOfDay(for: startDate)
+            docs = docs.filter { $0.dateUTC >= start }
+        }
+        if let endDate {
+            let startOfEnd = calendar.startOfDay(for: endDate)
+            let endExclusive = calendar.date(byAdding: .day, value: 1, to: startOfEnd) ?? startOfEnd
+            docs = docs.filter { $0.dateUTC < endExclusive }
+        }
+
         return PaginatedResponse(
             docs: docs,
             totalDocs: docs.count,

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LaunchesListView: View {
     @State private var viewModel: LaunchesViewModel
+    @State private var showingFilter = false
     private let loadsOnAppear: Bool
     private let enablesPagination: Bool
 
@@ -31,15 +32,47 @@ struct LaunchesListView: View {
                 }
             } else if viewModel.launches.isEmpty {
                 EmptyStateView(
-                    title: "No launches",
+                    title: viewModel.hasActiveFilter ? "No launches in range" : "No launches",
                     systemImage: "airplane.departure",
-                    description: "There are no launches to show right now."
+                    description: viewModel.hasActiveFilter
+                        ? "Try a wider date range or clear the filter."
+                        : "There are no launches to show right now."
                 )
             } else {
                 listContent
             }
         }
         .navigationTitle("Launches")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    viewModel.prepareFilterDraft()
+                    showingFilter = true
+                } label: {
+                    Image(
+                        systemName: viewModel.hasActiveFilter
+                            ? "line.3.horizontal.decrease.circle.fill"
+                            : "line.3.horizontal.decrease.circle"
+                    )
+                }
+                .accessibilityLabel("Filter launches")
+                .accessibilityIdentifier("launches-filter-button")
+            }
+        }
+        .safeAreaInset(edge: .top) {
+            if let summary = viewModel.activeFilterSummary {
+                Text("Filtered: \(summary)")
+                    .font(AppFont.footnote)
+                    .foregroundStyle(AppColor.secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.xs)
+                    .background(.bar)
+                    .accessibilityIdentifier("active-filter-summary")
+            }
+        }
+        .sheet(isPresented: $showingFilter) {
+            LaunchDateFilterView(viewModel: viewModel)
+        }
         .task {
             guard loadsOnAppear else { return }
             guard viewModel.launches.isEmpty, !viewModel.isInitialLoading else { return }
@@ -116,6 +149,17 @@ struct LaunchesListView: View {
                 launches: MockSpaceXService.previewLaunches,
                 errorMessage: "Could not load the next page.",
                 hasNextPage: true
+            )
+        )
+    }
+}
+
+#Preview("Filtered empty") {
+    NavigationStack {
+        LaunchesListView(
+            viewModel: .preview(
+                startDate: Date(timeIntervalSince1970: 1_600_000_000),
+                endDate: Date(timeIntervalSince1970: 1_610_000_000)
             )
         )
     }

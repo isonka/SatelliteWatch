@@ -1,6 +1,15 @@
 import Foundation
 
 enum DateFormatting {
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.timeZone = .current
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
     private static let displayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = .current
@@ -35,5 +44,9 @@ enum DateFormatting {
         case .quarter, .half, .year:
             return yearFormatter.string(from: date)
         }
+    }
+
+    static func dayOnly(_ date: Date) -> String {
+        dayFormatter.string(from: date)
     }
 }
