@@ -21,8 +21,8 @@ struct ContentView: View {
             }
 
             NavigationStack {
-                Text("Rockets")
-                    .navigationTitle("Rockets")
+                RocketsListView(service: dependencies.spaceXService)
+                    .id(dependencies.dataSourceMode)
             }
             .tabItem {
                 Label("Rockets", systemImage: "airplane")

@@ -2,6 +2,7 @@ import Foundation
 
 struct MockSpaceXService: SpaceXServiceProtocol {
     static var previewLaunches: [Launch] { sampleLaunches }
+    static var previewRocket: Rocket { sampleRocket }
 
     func fetchLaunches(
         page: Int,

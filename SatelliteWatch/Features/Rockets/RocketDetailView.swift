@@ -68,7 +68,7 @@ struct RocketDetailView: View {
 #if DEBUG
 #Preview {
     NavigationStack {
-        RocketDetailView(rocket: MockSpaceXService.previewLaunches[0].populatedRocket!)
+        RocketDetailView(rocket: MockSpaceXService.previewRocket)
     }
 }
 #endif
