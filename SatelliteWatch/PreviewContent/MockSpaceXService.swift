@@ -18,6 +18,15 @@ struct MockSpaceXService: SpaceXServiceProtocol {
     }
 
     func fetchRocket(id: String) async throws -> Rocket {
-        Rocket(id: id)
+        Rocket(
+            id: id,
+            name: "Mock Rocket",
+            type: "rocket",
+            active: true,
+            description: nil,
+            successRatePct: nil,
+            flickrImages: nil,
+            engines: nil
+        )
     }
 }

@@ -1,12 +1,10 @@
 import Testing
 @testable import SatelliteWatch
 
+@MainActor
 struct SatelliteWatchTests {
-
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-        // Swift Testing Documentation
-        // https://developer.apple.com/documentation/testing
+    @Test func liveDependenciesUseAPIClient() {
+        let service = AppDependencies.live.spaceXService
+        #expect(service is SpaceXAPIClient)
     }
-
 }

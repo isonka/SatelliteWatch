@@ -5,7 +5,7 @@ struct AppDependencies {
     let spaceXService: any SpaceXServiceProtocol
 
     static let live = AppDependencies(
-        spaceXService: MockSpaceXService()
+        spaceXService: SpaceXAPIClient()
     )
 
     static let preview = AppDependencies(
