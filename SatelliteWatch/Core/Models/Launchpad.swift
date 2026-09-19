@@ -1,6 +1,6 @@
 import Foundation
 
-struct LaunchpadSummary: Codable, Sendable, Equatable, Identifiable {
+struct LaunchpadSummary: Codable, Sendable, Equatable, Hashable, Identifiable {
     let id: String
     let name: String?
     let fullName: String?

@@ -1,12 +1,12 @@
 import Foundation
 
-struct RocketEngines: Codable, Sendable, Equatable {
+struct RocketEngines: Codable, Sendable, Equatable, Hashable {
     let number: Int?
     let type: String?
     let version: String?
 }
 
-struct Rocket: Codable, Sendable, Equatable, Identifiable {
+struct Rocket: Codable, Sendable, Equatable, Hashable, Identifiable {
     let id: String
     let name: String
     let type: String?

@@ -83,13 +83,15 @@ struct LaunchesListView: View {
     private var listContent: some View {
         List {
             ForEach(viewModel.launches) { launch in
-                LaunchRowView(launch: launch)
-                    .onAppear {
-                        guard enablesPagination else { return }
-                        Task {
-                            await viewModel.loadNextPageIfNeeded(currentItem: launch)
-                        }
+                NavigationLink(value: launch) {
+                    LaunchRowView(launch: launch)
+                }
+                .onAppear {
+                    guard enablesPagination else { return }
+                    Task {
+                        await viewModel.loadNextPageIfNeeded(currentItem: launch)
                     }
+                }
             }
 
             if viewModel.isLoadingMore {
@@ -117,6 +119,9 @@ struct LaunchesListView: View {
         .listStyle(.plain)
         .refreshable {
             await viewModel.refresh()
+        }
+        .navigationDestination(for: Launch.self) { launch in
+            LaunchDetailView(launch: launch)
         }
     }
 }

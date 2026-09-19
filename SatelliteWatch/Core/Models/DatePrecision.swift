@@ -1,6 +1,6 @@
 import Foundation
 
-enum DatePrecision: String, Codable, Sendable {
+enum DatePrecision: String, Codable, Sendable, Hashable {
     case half
     case quarter
     case year

@@ -1,18 +1,18 @@
 import Foundation
 
-struct LaunchLinks: Codable, Sendable, Equatable {
+struct LaunchLinks: Codable, Sendable, Equatable, Hashable {
     let patch: PatchLinks?
     let webcast: String?
     let wikipedia: String?
     let article: String?
 
-    struct PatchLinks: Codable, Sendable, Equatable {
+    struct PatchLinks: Codable, Sendable, Equatable, Hashable {
         let small: String?
         let large: String?
     }
 }
 
-struct Launch: Codable, Sendable, Equatable, Identifiable {
+struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
     let id: String
     let name: String
     let details: String?
@@ -72,7 +72,7 @@ struct Launch: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-enum RocketRef: Codable, Sendable, Equatable {
+enum RocketRef: Codable, Sendable, Equatable, Hashable {
     case id(String)
     case populated(Rocket)
 
@@ -103,7 +103,7 @@ enum RocketRef: Codable, Sendable, Equatable {
     }
 }
 
-enum LaunchpadRef: Codable, Sendable, Equatable {
+enum LaunchpadRef: Codable, Sendable, Equatable, Hashable {
     case id(String)
     case populated(LaunchpadSummary)
 
