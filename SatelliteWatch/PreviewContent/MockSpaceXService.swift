@@ -1,32 +1,118 @@
 import Foundation
 
 struct MockSpaceXService: SpaceXServiceProtocol {
+    static var previewLaunches: [Launch] { sampleLaunches }
+
     func fetchLaunches(
         page: Int,
         limit: Int,
         startDate: Date?,
         endDate: Date?
     ) async throws -> PaginatedResponse<Launch> {
-        PaginatedResponse(docs: [], page: page, hasNextPage: false)
+        let docs = Self.sampleLaunches
+        return PaginatedResponse(
+            docs: docs,
+            totalDocs: docs.count,
+            limit: limit,
+            totalPages: 1,
+            page: page,
+            hasNextPage: false,
+            hasPrevPage: false,
+            nextPage: nil,
+            prevPage: nil
+        )
     }
 
     func fetchRockets(
         page: Int,
         limit: Int
     ) async throws -> PaginatedResponse<Rocket> {
-        PaginatedResponse(docs: [], page: page, hasNextPage: false)
+        let docs = [Self.sampleRocket]
+        return PaginatedResponse(
+            docs: docs,
+            totalDocs: docs.count,
+            limit: limit,
+            totalPages: 1,
+            page: page,
+            hasNextPage: false,
+            hasPrevPage: false,
+            nextPage: nil,
+            prevPage: nil
+        )
     }
 
     func fetchRocket(id: String) async throws -> Rocket {
-        Rocket(
-            id: id,
-            name: "Mock Rocket",
-            type: "rocket",
-            active: true,
-            description: nil,
-            successRatePct: nil,
-            flickrImages: nil,
-            engines: nil
-        )
+        var rocket = Self.sampleRocket
+        if id != rocket.id {
+            rocket = Rocket(
+                id: id,
+                name: "Mock Rocket",
+                type: "rocket",
+                active: true,
+                description: nil,
+                successRatePct: nil,
+                flickrImages: nil,
+                engines: nil
+            )
+        }
+        return rocket
+    }
+}
+
+private extension MockSpaceXService {
+    static let sampleRocket = Rocket(
+        id: "falcon9",
+        name: "Falcon 9",
+        type: "rocket",
+        active: true,
+        description: "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX.",
+        successRatePct: 98,
+        flickrImages: ["https://farm1.staticflickr.com/929/28760836339_a04b3d9d14_b.jpg"],
+        engines: RocketEngines(number: 9, type: "merlin", version: "1D+")
+    )
+
+    static let sampleLaunchpad = LaunchpadSummary(
+        id: "ksc",
+        name: "KSC LC 39A",
+        fullName: "Kennedy Space Center Historic Launch Complex 39A",
+        locality: "Cape Canaveral",
+        region: "Florida"
+    )
+
+    static var sampleLaunches: [Launch] {
+        [
+            Launch(
+                id: "launch-1",
+                name: "Starlink 6-1",
+                details: "A batch of Starlink satellites.",
+                success: true,
+                upcoming: false,
+                dateUTC: Date(timeIntervalSince1970: 1_700_000_000),
+                datePrecision: .hour,
+                links: LaunchLinks(
+                    patch: .init(
+                        small: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png",
+                        large: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png"
+                    ),
+                    webcast: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    wikipedia: nil,
+                    article: nil
+                ),
+                rocket: .populated(sampleRocket),
+                launchpad: .populated(sampleLaunchpad)
+            ),
+            Launch(
+                id: "launch-2",
+                name: "Crew-10",
+                details: nil,
+                success: nil,
+                upcoming: true,
+                dateUTC: Date(timeIntervalSince1970: 1_800_000_000),
+                datePrecision: .day,
+                links: nil,
+                rocket: .populated(sampleRocket),
+                launchpad: .populated(sampleLaunchpad)
+            )
+        ]
     }
 }

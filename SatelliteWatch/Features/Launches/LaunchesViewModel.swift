@@ -130,3 +130,25 @@ final class LaunchesViewModel {
         }
     }
 }
+
+#if DEBUG
+extension LaunchesViewModel {    
+    static func preview(
+        launches: [Launch] = [],
+        isInitialLoading: Bool = false,
+        isLoadingMore: Bool = false,
+        errorMessage: String? = nil,
+        hasNextPage: Bool = false
+    ) -> LaunchesViewModel {
+        let viewModel = LaunchesViewModel(service: MockSpaceXService())
+        viewModel.launches = launches
+        viewModel.isInitialLoading = isInitialLoading
+        viewModel.isLoadingMore = isLoadingMore
+        viewModel.errorMessage = errorMessage
+        viewModel.hasNextPage = hasNextPage
+        viewModel.knownIDs = Set(launches.map(\.id))
+        viewModel.currentPage = launches.isEmpty ? 0 : 1
+        return viewModel
+    }
+}
+#endif
