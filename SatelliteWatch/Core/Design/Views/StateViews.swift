@@ -57,5 +57,5 @@ struct ErrorStateView: View {
 }
 
 #Preview("Error") {
-    ErrorStateView(message: "The server returned status code 500.") {}
+    ErrorStateView(message: "SpaceX data is temporarily unavailable. Please try again later.") {}
 }

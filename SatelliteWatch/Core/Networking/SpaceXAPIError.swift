@@ -10,15 +10,45 @@ enum SpaceXAPIError: Error, Equatable, LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Could not build a valid API request."
+            return "Something went wrong while preparing the request. Please try again."
         case .invalidResponse:
-            return "The server returned an unexpected response."
+            return "Received an unexpected response. Please try again."
         case .httpStatus(let code):
-            return "The server returned status code \(code)."
+            return Self.userMessage(forHTTPStatus: code)
         case .decoding:
-            return "Could not understand the server response."
-        case .transport(let message):
-            return message
+            return "Launch data could not be read. Please try again later."
+        case .transport:
+            return "Unable to connect. Check your internet connection and try again."
+        }
+    }
+    
+    var debugDescription: String {
+        switch self {
+        case .invalidURL:
+            return "invalidURL"
+        case .invalidResponse:
+            return "invalidResponse"
+        case .httpStatus(let code):
+            return "httpStatus(\(code))"
+        case .decoding(let detail):
+            return "decoding(\(detail))"
+        case .transport(let detail):
+            return "transport(\(detail))"
+        }
+    }
+
+    private static func userMessage(forHTTPStatus code: Int) -> String {
+        switch code {
+        case 401, 403:
+            return "Access to SpaceX data was denied. Please try again later."
+        case 404:
+            return "The requested data could not be found."
+        case 408, 429:
+            return "The service is busy. Please wait a moment and try again."
+        case 500...599:
+            return "SpaceX data is temporarily unavailable. Please try again later."
+        default:
+            return "Unable to load data right now. Please try again."
         }
     }
 }
