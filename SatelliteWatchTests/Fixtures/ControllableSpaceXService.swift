@@ -8,6 +8,7 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
     var rocketError: Error?
     var delayNanoseconds: UInt64 = 0
     private(set) var launchFetchCount = 0
+    private(set) var rocketListFetchCount = 0
     private(set) var rocketFetchCount = 0
     private(set) var lastRocketID: String?
     private(set) var lastStartDate: Date?
@@ -38,6 +39,8 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
     }
 
     func fetchRockets(page: Int, limit: Int) async throws -> PaginatedResponse<Rocket> {
+        rocketListFetchCount += 1
+
         if delayNanoseconds > 0 {
             try await Task.sleep(nanoseconds: delayNanoseconds)
         }

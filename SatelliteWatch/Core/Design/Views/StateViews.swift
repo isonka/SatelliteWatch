@@ -47,6 +47,29 @@ struct ErrorStateView: View {
     }
 }
 
+struct LoadMoreErrorFooter: View {
+    let message: String
+    let messageIdentifier: String
+    let retryIdentifier: String
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(AppFont.subheadline)
+                .foregroundStyle(AppColor.danger)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(messageIdentifier)
+
+            Button("Retry", action: retry)
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier(retryIdentifier)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, Spacing.xs)
+    }
+}
+
 #Preview("Loading") {
     LoadingStateView(message: "Loading launches…")
 }

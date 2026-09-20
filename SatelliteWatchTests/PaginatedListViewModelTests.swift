@@ -91,4 +91,33 @@ struct PaginatedListViewModelTests {
         #expect(viewModel.shouldLoadNextPage(currentItem: viewModel.items.first) == false)
         #expect(viewModel.shouldLoadNextPage(currentItem: viewModel.items.last) == true)
     }
+
+    @Test func retryLoadsNextPageAfterAppendFailure() async {
+        let service = ControllableSpaceXService()
+        service.rocketsPages = [
+            1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: true)
+        ]
+        service.failOnPage = 2
+
+        let viewModel = PaginatedListViewModel<Rocket>(pageSize: 1) { page, limit in
+            try await service.fetchRockets(page: page, limit: limit)
+        }
+
+        await viewModel.loadInitial()
+        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
+        #expect(viewModel.items.map(\.id) == ["a"])
+        #expect(viewModel.errorMessage != nil)
+
+        service.failOnPage = nil
+        service.rocketsPages[2] = .fixture(
+            docs: [Rocket.fixture(id: "b")],
+            page: 2,
+            hasNextPage: false
+        )
+        await viewModel.retry()
+
+        #expect(viewModel.items.map(\.id) == ["a", "b"])
+        #expect(viewModel.errorMessage == nil)
+        #expect(service.rocketListFetchCount == 3)
+    }
 }

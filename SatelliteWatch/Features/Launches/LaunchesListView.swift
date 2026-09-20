@@ -105,12 +105,13 @@ struct LaunchesListView: View {
             }
 
             if let errorMessage = viewModel.errorMessage, !viewModel.items.isEmpty {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(AppFont.subheadline)
-                    .foregroundStyle(AppColor.danger)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, Spacing.xs)
-                    .accessibilityIdentifier("launches-inline-error")
+                LoadMoreErrorFooter(
+                    message: errorMessage,
+                    messageIdentifier: "launches-inline-error",
+                    retryIdentifier: "launches-load-more-retry"
+                ) {
+                    Task { await viewModel.retry() }
+                }
             }
         }
         .listStyle(.plain)

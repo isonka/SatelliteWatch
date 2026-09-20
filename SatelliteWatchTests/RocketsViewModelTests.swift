@@ -75,5 +75,19 @@ struct RocketsViewModelTests {
         #expect(viewModel.items.map(\.id) == ["a"])
         #expect(viewModel.errorMessage != nil)
         #expect(viewModel.hasNextPage)
+        #expect(service.rocketListFetchCount == 2)
+
+        service.failOnPage = nil
+        service.rocketsPages[2] = .fixture(
+            docs: [Rocket.fixture(id: "b")],
+            page: 2,
+            hasNextPage: false
+        )
+        await viewModel.retry()
+
+        #expect(viewModel.items.map(\.id) == ["a", "b"])
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.hasNextPage == false)
+        #expect(service.rocketListFetchCount == 3)
     }
 }

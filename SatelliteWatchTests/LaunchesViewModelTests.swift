@@ -106,6 +106,20 @@ struct LaunchesViewModelTests {
         #expect(viewModel.launches.map(\.id) == ["1"])
         #expect(viewModel.errorMessage != nil)
         #expect(viewModel.hasNextPage)
+        #expect(service.launchFetchCount == 2)
+
+        service.failOnPage = nil
+        service.launchesPages[2] = .fixture(
+            docs: [Launch.fixture(id: "2")],
+            page: 2,
+            hasNextPage: false
+        )
+        await viewModel.retry()
+
+        #expect(viewModel.launches.map(\.id) == ["1", "2"])
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.hasNextPage == false)
+        #expect(service.launchFetchCount == 3)
     }
 
     @Test func surfacesErrorWhenInitialLoadFails() async {
