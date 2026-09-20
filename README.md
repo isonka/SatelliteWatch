@@ -1,5 +1,7 @@
 # SatelliteWatch
 
+[![Tests](https://github.com/isonka/SatelliteWatch/actions/workflows/tests.yml/badge.svg)](https://github.com/isonka/SatelliteWatch/actions/workflows/tests.yml)
+
 iOS SwiftUI app for SpaceX launches and rockets. Swift 6, Observation, URLSession, no third-party libraries.
 
 ## Requirements
@@ -8,6 +10,11 @@ iOS SwiftUI app for SpaceX launches and rockets. Swift 6, Observation, URLSessio
 - iOS 17+
 
 Open `SatelliteWatch.xcodeproj` and run the **SatelliteWatch** scheme.
+
+## Quick start for reviewers
+The SpaceX API is archived and currently returns HTTP 525.
+To see live data: Run (Debug) → toolbar data-source menu → Launch Library 2.
+Offline: choose Sample data (also used by UI tests).
 
 ## Architecture
 
