@@ -37,7 +37,7 @@ enum DateFormatting {
 
     static func display(date: Date, precision: DatePrecision? = nil) -> String {
         switch precision {
-        case .hour, .day, .none:
+        case .hour, .day, nil:
             return displayFormatter.string(from: date)
         case .month:
             return monthFormatter.string(from: date)

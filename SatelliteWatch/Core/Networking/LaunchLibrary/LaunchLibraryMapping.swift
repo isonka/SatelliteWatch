@@ -97,14 +97,14 @@ private extension LaunchLibraryLaunchDTO {
 
     var successFlag: Bool? {
         switch status?.id {
-        case 3:
+        case .some(3):
             true
-        case 4, 7:
+        case .some(4), .some(7):
             false
         default:
             switch status?.abbrev?.uppercased() {
-            case "SUCCESS": true
-            case "FAILURE", "PARTIAL FAILURE": false
+            case .some("SUCCESS"): true
+            case .some("FAILURE"), .some("PARTIAL FAILURE"): false
             default: nil
             }
         }

@@ -73,11 +73,8 @@ struct RocketDetailView: View {
     }
 
     private var activeText: String {
-        switch rocket.active {
-        case true: "Active"
-        case false: "Inactive"
-        case nil: "Unknown"
-        }
+        guard let active = rocket.active else { return "Unknown" }
+        return active ? "Active" : "Inactive"
     }
 
     private var enginesText: String? {
