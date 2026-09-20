@@ -1,10 +1,10 @@
 import Foundation
 @testable import SatelliteWatch
-import Testing
+import XCTest
 
 @MainActor
-struct LaunchesViewModelTests {
-    @Test func replacesPageOnInitialLoad() async {
+final class LaunchesViewModelTests: XCTestCase {
+    func testReplacesPageOnInitialLoad() async {
         let service = ControllableSpaceXService()
         service.launchesPages = [
             1: .fixture(
@@ -17,12 +17,12 @@ struct LaunchesViewModelTests {
         let viewModel = LaunchesViewModel(service: service, pageSize: 2)
         await viewModel.loadInitial()
 
-        #expect(viewModel.launches.map(\.id) == ["1", "2"])
-        #expect(viewModel.hasNextPage)
-        #expect(viewModel.errorMessage == nil)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2"])
+        XCTAssertTrue(viewModel.hasNextPage)
+        XCTAssertNil(viewModel.errorMessage)
     }
 
-    @Test func appendsNextPageAndDeduplicates() async {
+    func testAppendsNextPageAndDeduplicates() async {
         let service = ControllableSpaceXService()
         service.launchesPages = [
             1: .fixture(
@@ -41,11 +41,11 @@ struct LaunchesViewModelTests {
         await viewModel.loadInitial()
         await viewModel.loadNextPageIfNeeded(currentItem: viewModel.launches.last)
 
-        #expect(viewModel.launches.map(\.id) == ["1", "2", "3"])
-        #expect(viewModel.hasNextPage == false)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2", "3"])
+        XCTAssertFalse(viewModel.hasNextPage)
     }
 
-    @Test func ignoresAppendWhileLoadInFlight() async {
+    func testIgnoresAppendWhileLoadInFlight() async {
         let service = ControllableSpaceXService()
         service.delayNanoseconds = 150_000_000
         service.launchesPages = [
@@ -62,11 +62,11 @@ struct LaunchesViewModelTests {
         await first
         await second
 
-        #expect(service.launchFetchCount == 2)
-        #expect(viewModel.launches.map(\.id) == ["1", "2"])
+        XCTAssertEqual(service.launchFetchCount, 2)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2"])
     }
 
-    @Test func replaceCancelsInFlightAppend() async {
+    func testReplaceCancelsInFlightAppend() async {
         let service = ControllableSpaceXService()
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "1")], page: 1, hasNextPage: true),
@@ -89,10 +89,10 @@ struct LaunchesViewModelTests {
         await viewModel.loadInitial()
         await append
 
-        #expect(viewModel.launches.map(\.id) == ["replaced"])
+        XCTAssertEqual(viewModel.launches.map(\.id), ["replaced"])
     }
 
-    @Test func preservesRowsWhenAppendFails() async {
+    func testPreservesRowsWhenAppendFails() async {
         let service = ControllableSpaceXService()
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "1")], page: 1, hasNextPage: true)
@@ -103,10 +103,10 @@ struct LaunchesViewModelTests {
         await viewModel.loadInitial()
         await viewModel.loadNextPageIfNeeded(currentItem: viewModel.launches.last)
 
-        #expect(viewModel.launches.map(\.id) == ["1"])
-        #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.hasNextPage)
-        #expect(service.launchFetchCount == 2)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["1"])
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.hasNextPage)
+        XCTAssertEqual(service.launchFetchCount, 2)
 
         service.failOnPage = nil
         service.launchesPages[2] = .fixture(
@@ -116,24 +116,24 @@ struct LaunchesViewModelTests {
         )
         await viewModel.retry()
 
-        #expect(viewModel.launches.map(\.id) == ["1", "2"])
-        #expect(viewModel.errorMessage == nil)
-        #expect(viewModel.hasNextPage == false)
-        #expect(service.launchFetchCount == 3)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2"])
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.hasNextPage)
+        XCTAssertEqual(service.launchFetchCount, 3)
     }
 
-    @Test func surfacesErrorWhenInitialLoadFails() async {
+    func testSurfacesErrorWhenInitialLoadFails() async {
         let service = ControllableSpaceXService()
         service.failOnPage = 1
 
         let viewModel = LaunchesViewModel(service: service)
         await viewModel.loadInitial()
 
-        #expect(viewModel.launches.isEmpty)
-        #expect(viewModel.errorMessage != nil)
+        XCTAssertTrue(viewModel.launches.isEmpty)
+        XCTAssertNotNil(viewModel.errorMessage)
     }
 
-    @Test func ignoresStaleResponsesAfterNewerReplace() async {
+    func testIgnoresStaleResponsesAfterNewerReplace() async {
         let service = ControllableSpaceXService()
         service.delayNanoseconds = 200_000_000
         service.launchesPages = [
@@ -150,16 +150,16 @@ struct LaunchesViewModelTests {
         await viewModel.loadInitial()
         await slow
 
-        #expect(viewModel.launches.map(\.id) == ["fast"])
+        XCTAssertEqual(viewModel.launches.map(\.id), ["fast"])
     }
 
-    @Test func retryReloadsEmptyState() async {
+    func testRetryReloadsEmptyState() async {
         let service = ControllableSpaceXService()
         service.failOnPage = 1
 
         let viewModel = LaunchesViewModel(service: service)
         await viewModel.loadInitial()
-        #expect(viewModel.errorMessage != nil)
+        XCTAssertNotNil(viewModel.errorMessage)
 
         service.failOnPage = nil
         service.launchesPages = [
@@ -167,11 +167,11 @@ struct LaunchesViewModelTests {
         ]
         await viewModel.retry()
 
-        #expect(viewModel.launches.map(\.id) == ["recovered"])
-        #expect(viewModel.errorMessage == nil)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["recovered"])
+        XCTAssertNil(viewModel.errorMessage)
     }
 
-    @Test func appliesAndClearsDateFilter() async {
+    func testAppliesAndClearsDateFilter() async {
         let service = ControllableSpaceXService()
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "all")], page: 1, hasNextPage: false)
@@ -187,29 +187,29 @@ struct LaunchesViewModelTests {
         viewModel.draftEndDate = Date(timeIntervalSince1970: 1_700_000_000)
         await viewModel.applyFilter()
 
-        #expect(viewModel.hasActiveFilter)
-        #expect(viewModel.launches.map(\.id) == ["filtered"])
-        #expect(service.lastStartDate != nil)
-        #expect(service.lastEndDate != nil)
+        XCTAssertTrue(viewModel.hasActiveFilter)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["filtered"])
+        XCTAssertNotNil(service.lastStartDate)
+        XCTAssertNotNil(service.lastEndDate)
 
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "cleared")], page: 1, hasNextPage: false)
         ]
         await viewModel.clearFilter()
 
-        #expect(viewModel.hasActiveFilter == false)
-        #expect(viewModel.launches.map(\.id) == ["cleared"])
-        #expect(service.lastStartDate == nil)
-        #expect(service.lastEndDate == nil)
+        XCTAssertFalse(viewModel.hasActiveFilter)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["cleared"])
+        XCTAssertNil(service.lastStartDate)
+        XCTAssertNil(service.lastEndDate)
     }
 
-    @Test func rejectsInvalidDraftFilterRange() async {
+    func testRejectsInvalidDraftFilterRange() async {
         let viewModel = LaunchesViewModel(service: ControllableSpaceXService())
         viewModel.draftStartDate = Date(timeIntervalSince1970: 2_000_000_000)
         viewModel.draftEndDate = Date(timeIntervalSince1970: 1_000_000_000)
 
-        #expect(viewModel.canApplyDraftFilter == false)
+        XCTAssertFalse(viewModel.canApplyDraftFilter)
         await viewModel.applyFilter()
-        #expect(viewModel.hasActiveFilter == false)
+        XCTAssertFalse(viewModel.hasActiveFilter)
     }
 }

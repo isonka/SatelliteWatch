@@ -1,10 +1,10 @@
 import Foundation
 @testable import SatelliteWatch
-import Testing
+import XCTest
 
 @MainActor
-struct PaginatedListViewModelTests {
-    @Test func replaceAndAppendWithPolicyC() async {
+final class PaginatedListViewModelTests: XCTestCase {
+    func testReplaceAndAppendWithPolicyC() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: true),
@@ -16,18 +16,18 @@ struct PaginatedListViewModelTests {
         }
 
         await viewModel.loadInitial()
-        #expect(viewModel.items.map(\.id) == ["a"])
+        XCTAssertEqual(viewModel.items.map(\.id), ["a"])
 
         await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
-        #expect(viewModel.items.map(\.id) == ["a", "b"])
-        #expect(viewModel.hasNextPage == false)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
+        XCTAssertFalse(viewModel.hasNextPage)
     }
 
     /// Pull-to-refresh runs inside a SwiftUI `.refreshable` task. If that task
     /// is cancelled mid-flight the list must not be left silently empty: with no
     /// rows, no error and no spinner, the screen renders its empty state even
     /// though data was there a moment ago.
-    @Test func cancelledRefreshKeepsExistingRows() async {
+    func testCancelledRefreshKeepsExistingRows() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: false)
@@ -37,7 +37,7 @@ struct PaginatedListViewModelTests {
             try await service.fetchRockets(page: page, limit: limit)
         }
         await viewModel.loadInitial()
-        #expect(viewModel.items.map(\.id) == ["a"])
+        XCTAssertEqual(viewModel.items.map(\.id), ["a"])
 
         service.delayNanoseconds = 200_000_000
         let refresh = Task { await viewModel.refresh() }
@@ -45,11 +45,11 @@ struct PaginatedListViewModelTests {
         refresh.cancel()
         await refresh.value
 
-        #expect(viewModel.items.map(\.id) == ["a"])
-        #expect(viewModel.isInitialLoading == false)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a"])
+        XCTAssertFalse(viewModel.isInitialLoading)
     }
 
-    @Test func refreshKeepsRowsVisibleWhileLoading() async {
+    func testRefreshKeepsRowsVisibleWhileLoading() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: false)
@@ -67,16 +67,16 @@ struct PaginatedListViewModelTests {
         let refresh = Task { await viewModel.refresh() }
         try? await Task.sleep(nanoseconds: 20_000_000)
 
-        #expect(viewModel.items.map(\.id) == ["a"])
-        #expect(viewModel.isRefreshing)
-        #expect(viewModel.isInitialLoading == false)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a"])
+        XCTAssertTrue(viewModel.isRefreshing)
+        XCTAssertFalse(viewModel.isInitialLoading)
 
         await refresh.value
-        #expect(viewModel.items.map(\.id) == ["b"])
-        #expect(viewModel.isRefreshing == false)
+        XCTAssertEqual(viewModel.items.map(\.id), ["b"])
+        XCTAssertFalse(viewModel.isRefreshing)
     }
 
-    @Test func shouldLoadNextPageOnlyNearEnd() async {
+    func testShouldLoadNextPageOnlyNearEnd() async {
         let service = ControllableSpaceXService()
         let docs = (1...10).map { Rocket.fixture(id: "\($0)") }
         service.rocketsPages = [
@@ -88,11 +88,11 @@ struct PaginatedListViewModelTests {
         }
         await viewModel.loadInitial()
 
-        #expect(viewModel.shouldLoadNextPage(currentItem: viewModel.items.first) == false)
-        #expect(viewModel.shouldLoadNextPage(currentItem: viewModel.items.last) == true)
+        XCTAssertFalse(viewModel.shouldLoadNextPage(currentItem: viewModel.items.first))
+        XCTAssertTrue(viewModel.shouldLoadNextPage(currentItem: viewModel.items.last))
     }
 
-    @Test func retryLoadsNextPageAfterAppendFailure() async {
+    func testRetryLoadsNextPageAfterAppendFailure() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: true)
@@ -105,8 +105,8 @@ struct PaginatedListViewModelTests {
 
         await viewModel.loadInitial()
         await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
-        #expect(viewModel.items.map(\.id) == ["a"])
-        #expect(viewModel.errorMessage != nil)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a"])
+        XCTAssertNotNil(viewModel.errorMessage)
 
         service.failOnPage = nil
         service.rocketsPages[2] = .fixture(
@@ -116,8 +116,8 @@ struct PaginatedListViewModelTests {
         )
         await viewModel.retry()
 
-        #expect(viewModel.items.map(\.id) == ["a", "b"])
-        #expect(viewModel.errorMessage == nil)
-        #expect(service.rocketListFetchCount == 3)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(service.rocketListFetchCount, 3)
     }
 }

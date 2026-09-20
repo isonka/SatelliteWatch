@@ -1,21 +1,21 @@
 import Foundation
 import UIKit
 @testable import SatelliteWatch
-import Testing
+import XCTest
 
 @MainActor
-struct RemoteImageLoaderTests {
-    @Test func downsampleCapsLongestPixelEdge() throws {
+final class RemoteImageLoaderTests: XCTestCase {
+    func testDownsampleCapsLongestPixelEdge() throws {
         let thumbnail = RemoteImageLoader.downsample(data: try pngData(), maxPixelSize: 16)
 
         guard let cgImage = thumbnail?.cgImage else {
-            Issue.record("Downsample returned no image")
+            XCTFail("Downsample returned no image")
             return
         }
-        #expect(max(cgImage.width, cgImage.height) <= 16)
+        XCTAssertLessThanOrEqual(max(cgImage.width, cgImage.height), 16)
     }
 
-    @Test func concurrentSameKeySharesOneRequest() async throws {
+    func testConcurrentSameKeySharesOneRequest() async throws {
         let stub = StubImageFetch(data: try pngData(), delayNanoseconds: 150_000_000)
         let loader = RemoteImageLoader { url in
             try await stub.fetch(url)
@@ -26,12 +26,13 @@ struct RemoteImageLoaderTests {
         async let second = loader.image(from: url, maxPixelSize: 16)
         let images = await (first, second)
 
-        #expect(images.0 != nil)
-        #expect(images.1 != nil)
-        #expect(await stub.count == 1)
+        XCTAssertNotNil(images.0)
+        XCTAssertNotNil(images.1)
+        let count = await stub.count
+        XCTAssertEqual(count, 1)
     }
 
-    @Test func differentPixelSizesDoNotShareARequest() async throws {
+    func testDifferentPixelSizesDoNotShareARequest() async throws {
         let stub = StubImageFetch(data: try pngData(), delayNanoseconds: 150_000_000)
         let loader = RemoteImageLoader { url in
             try await stub.fetch(url)
@@ -41,11 +42,11 @@ struct RemoteImageLoaderTests {
         async let first = loader.image(from: url, maxPixelSize: 16)
         async let second = loader.image(from: url, maxPixelSize: 32)
         _ = await (first, second)
-
-        #expect(await stub.count == 2)
+        let count = await stub.count
+        XCTAssertEqual(count, 2)
     }
 
-    @Test func cacheHitDoesNotRefetch() async throws {
+    func testCacheHitDoesNotRefetch() async throws {
         let stub = StubImageFetch(data: try pngData())
         let loader = RemoteImageLoader { url in
             try await stub.fetch(url)
@@ -55,9 +56,10 @@ struct RemoteImageLoaderTests {
         let first = await loader.image(from: url, maxPixelSize: 16)
         let second = await loader.image(from: url, maxPixelSize: 16)
 
-        #expect(first != nil)
-        #expect(second != nil)
-        #expect(await stub.count == 1)
+        XCTAssertNotNil(first)
+        XCTAssertNotNil(second)
+        let count = await stub.count
+        XCTAssertEqual(count, 1)
     }
 
     private func pngData() throws -> Data {

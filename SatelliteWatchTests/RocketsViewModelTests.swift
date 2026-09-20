@@ -1,10 +1,10 @@
 import Foundation
 @testable import SatelliteWatch
-import Testing
+import XCTest
 
 @MainActor
-struct RocketsViewModelTests {
-    @Test func replacesPageOnInitialLoad() async {
+final class RocketsViewModelTests: XCTestCase {
+    func testReplacesPageOnInitialLoad() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(
@@ -17,12 +17,12 @@ struct RocketsViewModelTests {
         let viewModel = PaginatedListViewModel<Rocket>(service: service, pageSize: 2)
         await viewModel.loadInitial()
 
-        #expect(viewModel.items.map(\.id) == ["a", "b"])
-        #expect(viewModel.hasNextPage)
-        #expect(viewModel.errorMessage == nil)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
+        XCTAssertTrue(viewModel.hasNextPage)
+        XCTAssertNil(viewModel.errorMessage)
     }
 
-    @Test func appendsNextPageAndDeduplicates() async {
+    func testAppendsNextPageAndDeduplicates() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: true),
@@ -37,11 +37,11 @@ struct RocketsViewModelTests {
         await viewModel.loadInitial()
         await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
 
-        #expect(viewModel.items.map(\.id) == ["a", "b"])
-        #expect(viewModel.hasNextPage == false)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
+        XCTAssertFalse(viewModel.hasNextPage)
     }
 
-    @Test func ignoresAppendWhileLoadInFlight() async {
+    func testIgnoresAppendWhileLoadInFlight() async {
         let service = ControllableSpaceXService()
         service.delayNanoseconds = 150_000_000
         service.rocketsPages = [
@@ -58,10 +58,10 @@ struct RocketsViewModelTests {
         await first
         await second
 
-        #expect(viewModel.items.map(\.id) == ["a", "b"])
+        XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
     }
 
-    @Test func preservesRowsWhenAppendFails() async {
+    func testPreservesRowsWhenAppendFails() async {
         let service = ControllableSpaceXService()
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: true)
@@ -72,10 +72,10 @@ struct RocketsViewModelTests {
         await viewModel.loadInitial()
         await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
 
-        #expect(viewModel.items.map(\.id) == ["a"])
-        #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.hasNextPage)
-        #expect(service.rocketListFetchCount == 2)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a"])
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.hasNextPage)
+        XCTAssertEqual(service.rocketListFetchCount, 2)
 
         service.failOnPage = nil
         service.rocketsPages[2] = .fixture(
@@ -85,9 +85,9 @@ struct RocketsViewModelTests {
         )
         await viewModel.retry()
 
-        #expect(viewModel.items.map(\.id) == ["a", "b"])
-        #expect(viewModel.errorMessage == nil)
-        #expect(viewModel.hasNextPage == false)
-        #expect(service.rocketListFetchCount == 3)
+        XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.hasNextPage)
+        XCTAssertEqual(service.rocketListFetchCount, 3)
     }
 }

@@ -1,37 +1,37 @@
 import Foundation
 @testable import SatelliteWatch
-import Testing
+import XCTest
 
 @MainActor
-struct LaunchRocketViewModelTests {
-    @Test func populatedRocketIsReadyWithoutFetching() async {
+final class LaunchRocketViewModelTests: XCTestCase {
+    func testPopulatedRocketIsReadyWithoutFetching() async {
         let service = ControllableSpaceXService()
         let viewModel = LaunchRocketViewModel(
             launch: .fixture(rocket: .populated(.fixture(id: "falcon9")))
         )
 
-        #expect(viewModel.state == .loaded(.fixture(id: "falcon9")))
+        XCTAssertEqual(viewModel.state, .loaded(.fixture(id: "falcon9")))
 
         await viewModel.loadIfNeeded(using: service)
-        #expect(service.rocketFetchCount == 0)
+        XCTAssertEqual(service.rocketFetchCount, 0)
     }
 
-    @Test func unpopulatedRocketIsFetchedByID() async {
+    func testUnpopulatedRocketIsFetchedByID() async {
         let service = ControllableSpaceXService()
         let viewModel = LaunchRocketViewModel(
             launch: .fixture(rocket: .id("falconheavy"))
         )
 
-        #expect(viewModel.state == .idle)
+        XCTAssertEqual(viewModel.state, .idle)
 
         await viewModel.loadIfNeeded(using: service)
 
-        #expect(service.rocketFetchCount == 1)
-        #expect(service.lastRocketID == "falconheavy")
-        #expect(viewModel.state == .loaded(.fixture(id: "falconheavy")))
+        XCTAssertEqual(service.rocketFetchCount, 1)
+        XCTAssertEqual(service.lastRocketID, "falconheavy")
+        XCTAssertEqual(viewModel.state, .loaded(.fixture(id: "falconheavy")))
     }
 
-    @Test func loadIsNotRepeatedOnceLoaded() async {
+    func testLoadIsNotRepeatedOnceLoaded() async {
         let service = ControllableSpaceXService()
         let viewModel = LaunchRocketViewModel(
             launch: .fixture(rocket: .id("falconheavy"))
@@ -40,10 +40,10 @@ struct LaunchRocketViewModelTests {
         await viewModel.loadIfNeeded(using: service)
         await viewModel.loadIfNeeded(using: service)
 
-        #expect(service.rocketFetchCount == 1)
+        XCTAssertEqual(service.rocketFetchCount, 1)
     }
 
-    @Test func failureSurfacesMessageAndRetrySucceeds() async {
+    func testFailureSurfacesMessageAndRetrySucceeds() async {
         let service = ControllableSpaceXService()
         service.rocketError = SpaceXAPIError.httpStatus(500)
 
@@ -54,25 +54,25 @@ struct LaunchRocketViewModelTests {
         await viewModel.loadIfNeeded(using: service)
 
         guard case .failed(let message) = viewModel.state else {
-            Issue.record("Expected failed state, got \(viewModel.state)")
+            XCTFail("Expected failed state, got \(viewModel.state)")
             return
         }
-        #expect(!message.isEmpty)
+        XCTAssertFalse(message.isEmpty)
 
         service.rocketError = nil
         await viewModel.retry()
 
-        #expect(viewModel.state == .loaded(.fixture(id: "falcon9")))
-        #expect(service.rocketFetchCount == 2)
+        XCTAssertEqual(viewModel.state, .loaded(.fixture(id: "falcon9")))
+        XCTAssertEqual(service.rocketFetchCount, 2)
     }
 
-    @Test func retryDoesNothingWhenNotFailed() async {
+    func testRetryDoesNothingWhenNotFailed() async {
         let service = ControllableSpaceXService()
         let viewModel = LaunchRocketViewModel(
             launch: .fixture(rocket: .populated(.fixture()))
         )
 
         await viewModel.retry()
-        #expect(service.rocketFetchCount == 0)
+        XCTAssertEqual(service.rocketFetchCount, 0)
     }
 }
