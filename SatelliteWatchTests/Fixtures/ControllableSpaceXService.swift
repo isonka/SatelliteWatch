@@ -8,7 +8,6 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
     var failOnPage: Int?
     var rocketError: Error?
     var parkFetches = false
-    var delayNanoseconds: UInt64 = 0
     private(set) var launchFetchCount = 0
     private(set) var rocketListFetchCount = 0
     private(set) var rocketFetchCount = 0
@@ -82,9 +81,6 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
             return
         }
 
-        if delayNanoseconds > 0 {
-            try await Task.sleep(nanoseconds: delayNanoseconds)
-        }
         try Task.checkCancellation()
     }
 }
