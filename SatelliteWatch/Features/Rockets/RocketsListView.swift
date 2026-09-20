@@ -1,18 +1,18 @@
 import SwiftUI
 
 struct RocketsListView: View {
-    @State private var viewModel: RocketsViewModel
+    @State private var viewModel: PaginatedListViewModel<Rocket>
     private let loadsOnAppear: Bool
     private let enablesPagination: Bool
 
     init(service: any SpaceXServiceProtocol) {
-        _viewModel = State(initialValue: RocketsViewModel(service: service))
+        _viewModel = State(initialValue: PaginatedListViewModel(service: service))
         loadsOnAppear = true
         enablesPagination = true
     }
 
     init(
-        viewModel: RocketsViewModel,
+        viewModel: PaginatedListViewModel<Rocket>,
         loadsOnAppear: Bool = false,
         enablesPagination: Bool = false
     ) {
@@ -23,13 +23,13 @@ struct RocketsListView: View {
 
     var body: some View {
         Group {
-            if viewModel.isInitialLoading && viewModel.rockets.isEmpty {
+            if viewModel.isInitialLoading && viewModel.items.isEmpty {
                 LoadingStateView(message: "Loading rockets…")
-            } else if let errorMessage = viewModel.errorMessage, viewModel.rockets.isEmpty {
+            } else if let errorMessage = viewModel.errorMessage, viewModel.items.isEmpty {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.retry() }
                 }
-            } else if viewModel.rockets.isEmpty {
+            } else if viewModel.items.isEmpty {
                 EmptyStateView(
                     title: "No rockets",
                     systemImage: "airplane",
@@ -42,14 +42,14 @@ struct RocketsListView: View {
         .navigationTitle("Rockets")
         .task {
             guard loadsOnAppear else { return }
-            guard viewModel.rockets.isEmpty, !viewModel.isInitialLoading else { return }
+            guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
             await viewModel.loadInitial()
         }
     }
 
     private var listContent: some View {
         List {
-            ForEach(viewModel.rockets) { rocket in
+            ForEach(viewModel.items) { rocket in
                 NavigationLink(value: rocket) {
                     RocketRowView(rocket: rocket)
                 }
@@ -73,7 +73,7 @@ struct RocketsListView: View {
                 .listRowSeparator(.hidden)
             }
 
-            if let errorMessage = viewModel.errorMessage, !viewModel.rockets.isEmpty {
+            if let errorMessage = viewModel.errorMessage, !viewModel.items.isEmpty {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .font(AppFont.subheadline)
                     .foregroundStyle(AppColor.danger)

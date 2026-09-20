@@ -14,10 +14,10 @@ struct RocketsViewModelTests {
             )
         ]
 
-        let viewModel = RocketsViewModel(service: service, pageSize: 2)
+        let viewModel = PaginatedListViewModel<Rocket>(service: service, pageSize: 2)
         await viewModel.loadInitial()
 
-        #expect(viewModel.rockets.map(\.id) == ["a", "b"])
+        #expect(viewModel.items.map(\.id) == ["a", "b"])
         #expect(viewModel.hasNextPage)
         #expect(viewModel.errorMessage == nil)
     }
@@ -33,11 +33,11 @@ struct RocketsViewModelTests {
             )
         ]
 
-        let viewModel = RocketsViewModel(service: service, pageSize: 1)
+        let viewModel = PaginatedListViewModel<Rocket>(service: service, pageSize: 1)
         await viewModel.loadInitial()
-        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.rockets.last)
+        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
 
-        #expect(viewModel.rockets.map(\.id) == ["a", "b"])
+        #expect(viewModel.items.map(\.id) == ["a", "b"])
         #expect(viewModel.hasNextPage == false)
     }
 
@@ -49,16 +49,16 @@ struct RocketsViewModelTests {
             2: .fixture(docs: [Rocket.fixture(id: "b")], page: 2, hasNextPage: false)
         ]
 
-        let viewModel = RocketsViewModel(service: service, pageSize: 1)
+        let viewModel = PaginatedListViewModel<Rocket>(service: service, pageSize: 1)
         await viewModel.loadInitial()
 
-        let item = viewModel.rockets.last
+        let item = viewModel.items.last
         async let first: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
         async let second: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
         await first
         await second
 
-        #expect(viewModel.rockets.map(\.id) == ["a", "b"])
+        #expect(viewModel.items.map(\.id) == ["a", "b"])
     }
 
     @Test func preservesRowsWhenAppendFails() async {
@@ -68,11 +68,11 @@ struct RocketsViewModelTests {
         ]
         service.failOnPage = 2
 
-        let viewModel = RocketsViewModel(service: service, pageSize: 1)
+        let viewModel = PaginatedListViewModel<Rocket>(service: service, pageSize: 1)
         await viewModel.loadInitial()
-        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.rockets.last)
+        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.items.last)
 
-        #expect(viewModel.rockets.map(\.id) == ["a"])
+        #expect(viewModel.items.map(\.id) == ["a"])
         #expect(viewModel.errorMessage != nil)
         #expect(viewModel.hasNextPage)
     }

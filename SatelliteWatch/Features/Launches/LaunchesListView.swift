@@ -24,13 +24,13 @@ struct LaunchesListView: View {
 
     var body: some View {
         Group {
-            if viewModel.isInitialLoading && viewModel.launches.isEmpty {
+            if viewModel.isInitialLoading && viewModel.items.isEmpty {
                 LoadingStateView(message: "Loading launches…")
-            } else if let errorMessage = viewModel.errorMessage, viewModel.launches.isEmpty {
+            } else if let errorMessage = viewModel.errorMessage, viewModel.items.isEmpty {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.retry() }
                 }
-            } else if viewModel.launches.isEmpty {
+            } else if viewModel.items.isEmpty {
                 EmptyStateView(
                     title: viewModel.hasActiveFilter ? "No launches in range" : "No launches",
                     systemImage: "airplane.departure",
@@ -75,14 +75,14 @@ struct LaunchesListView: View {
         }
         .task {
             guard loadsOnAppear else { return }
-            guard viewModel.launches.isEmpty, !viewModel.isInitialLoading else { return }
+            guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
             await viewModel.loadInitial()
         }
     }
 
     private var listContent: some View {
         List {
-            ForEach(viewModel.launches) { launch in
+            ForEach(viewModel.items) { launch in
                 NavigationLink(value: launch) {
                     LaunchRowView(launch: launch)
                 }
@@ -107,7 +107,7 @@ struct LaunchesListView: View {
                 .accessibilityIdentifier("launches-loading-more")
             }
 
-            if let errorMessage = viewModel.errorMessage, !viewModel.launches.isEmpty {
+            if let errorMessage = viewModel.errorMessage, !viewModel.items.isEmpty {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .font(AppFont.subheadline)
                     .foregroundStyle(AppColor.danger)
