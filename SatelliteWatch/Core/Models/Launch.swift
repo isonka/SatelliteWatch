@@ -70,10 +70,6 @@ struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
         }
         return nil
     }
-
-    var hasRocketReference: Bool {
-        rocket != nil
-    }
 }
 
 enum RocketRef: Codable, Sendable, Equatable, Hashable {

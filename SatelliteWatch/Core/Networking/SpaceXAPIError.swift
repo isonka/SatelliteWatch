@@ -1,7 +1,6 @@
 import Foundation
 
 enum SpaceXAPIError: Error, Equatable, LocalizedError, Sendable {
-    case invalidURL
     case invalidResponse
     case httpStatus(Int)
     case decoding(String)
@@ -9,8 +8,6 @@ enum SpaceXAPIError: Error, Equatable, LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL:
-            return "Something went wrong while preparing the request. Please try again."
         case .invalidResponse:
             return "Received an unexpected response. Please try again."
         case .httpStatus(let code):
@@ -24,8 +21,6 @@ enum SpaceXAPIError: Error, Equatable, LocalizedError, Sendable {
     
     var debugDescription: String {
         switch self {
-        case .invalidURL:
-            return "invalidURL"
         case .invalidResponse:
             return "invalidResponse"
         case .httpStatus(let code):

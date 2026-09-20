@@ -195,6 +195,84 @@ final class LaunchLibraryAPIClientTests: XCTestCase {
             try await client.fetchRockets(page: 1, limit: 20)
         }
     }
+
+    func testExpiredLaunchSnapshotFallsBackToDiskWhenNetworkFails() async throws {
+        let directory = try makeCacheDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let clock = TestClock(Date(timeIntervalSince1970: 1_700_000_000))
+        let stub = StubLaunchLibraryTransport()
+        let client = LaunchLibraryAPIClient(
+            transport: { try await stub.data(for: $0) },
+            now: { clock.now },
+            cacheTTL: 60,
+            cacheDirectory: directory
+        )
+
+        let first = try await client.fetchLaunches(page: 1, limit: 20, startDate: nil, endDate: nil)
+        XCTAssertFalse(first.docs.isEmpty)
+
+        clock.now += 120
+        await stub.setStatusCode(429)
+
+        let restarted = LaunchLibraryAPIClient(
+            transport: { try await stub.data(for: $0) },
+            now: { clock.now },
+            cacheTTL: 60,
+            cacheDirectory: directory
+        )
+        let second = try await restarted.fetchLaunches(
+            page: 1,
+            limit: 20,
+            startDate: nil,
+            endDate: nil
+        )
+        XCTAssertEqual(second.docs.map(\.id), first.docs.map(\.id))
+    }
+
+    func testExpiredRocketSnapshotFallsBackToDiskWhenNetworkFails() async throws {
+        let directory = try makeCacheDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let clock = TestClock(Date(timeIntervalSince1970: 1_700_000_000))
+        let stub = StubLaunchLibraryTransport()
+        let client = LaunchLibraryAPIClient(
+            transport: { try await stub.data(for: $0) },
+            now: { clock.now },
+            cacheTTL: 60,
+            cacheDirectory: directory
+        )
+
+        let first = try await client.fetchRockets(page: 1, limit: 20)
+        XCTAssertFalse(first.docs.isEmpty)
+
+        clock.now += 120
+        await stub.setStatusCode(429)
+
+        let restarted = LaunchLibraryAPIClient(
+            transport: { try await stub.data(for: $0) },
+            now: { clock.now },
+            cacheTTL: 60,
+            cacheDirectory: directory
+        )
+        let second = try await restarted.fetchRockets(page: 1, limit: 20)
+        XCTAssertEqual(second.docs.map(\.id), first.docs.map(\.id))
+    }
+
+    private func makeCacheDirectory() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+}
+
+private final class TestClock: @unchecked Sendable {
+    var now: Date
+
+    init(_ now: Date) {
+        self.now = now
+    }
 }
 
 private func assertThrows<E: Error & Equatable, T>(
@@ -314,7 +392,7 @@ private actor StubLaunchLibraryTransport {
     private let previous: Data
     private let upcoming: Data
     private let rockets: Data
-    private let statusCode: Int
+    private var statusCode: Int
 
     var lastRequest: URLRequest? { requests.last }
 
@@ -338,6 +416,10 @@ private actor StubLaunchLibraryTransport {
         self.previous = previous
         self.upcoming = upcoming
         self.rockets = rockets
+        self.statusCode = statusCode
+    }
+
+    func setStatusCode(_ statusCode: Int) {
         self.statusCode = statusCode
     }
 

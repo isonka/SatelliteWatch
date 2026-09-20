@@ -33,9 +33,9 @@ struct LaunchDetailView: View {
                         DateFormatting.display(date: launch.dateUTC, precision: launch.datePrecision)
                     )
 
-                    Text(descriptionText)
+                    Text(descriptionText ?? "No description available.")
                         .font(AppFont.body)
-                        .foregroundStyle(hasDescription ? AppColor.primaryText : AppColor.secondaryText)
+                        .foregroundStyle(descriptionText == nil ? AppColor.secondaryText : AppColor.primaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -121,12 +121,10 @@ struct LaunchDetailView: View {
         }
     }
 
-    private var hasDescription: Bool {
-        !(launch.details?.isEmpty ?? true)
-    }
-
-    private var descriptionText: String {
-        hasDescription ? launch.details! : "No description available."
+    /// Non-empty launch details, or nil when the payload carries none.
+    private var descriptionText: String? {
+        guard let details = launch.details, !details.isEmpty else { return nil }
+        return details
     }
 
     private func labeledRow(_ title: String, _ value: String) -> some View {

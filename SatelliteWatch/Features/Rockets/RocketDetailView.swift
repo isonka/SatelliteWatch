@@ -24,9 +24,9 @@ struct RocketDetailView: View {
                         labeledRow("Engines", enginesText)
                     }
 
-                    Text(descriptionText)
+                    Text(descriptionText ?? "No description available.")
                         .font(AppFont.body)
-                        .foregroundStyle(hasDescription ? AppColor.primaryText : AppColor.secondaryText)
+                        .foregroundStyle(descriptionText == nil ? AppColor.secondaryText : AppColor.primaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -64,12 +64,10 @@ struct RocketDetailView: View {
         rocket.launches(from: launchesViewModel.items)
     }
 
-    private var hasDescription: Bool {
-        !(rocket.description?.isEmpty ?? true)
-    }
-
-    private var descriptionText: String {
-        hasDescription ? rocket.description! : "No description available."
+    /// Non-empty rocket description, or nil when the payload carries none.
+    private var descriptionText: String? {
+        guard let description = rocket.description, !description.isEmpty else { return nil }
+        return description
     }
 
     private var activeText: String {

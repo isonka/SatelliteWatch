@@ -45,10 +45,6 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
         }
     }
 
-    func cancelLoads() {
-        loadTask?.cancel()
-    }
-
     func shouldLoadNextPage(currentItem: Item?) -> Bool {
         guard let currentItem else { return false }
         guard let index = items.firstIndex(where: { $0.id == currentItem.id }) else { return false }

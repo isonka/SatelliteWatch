@@ -25,16 +25,8 @@ final class AppDependencies {
         self.spaceXService = Self.makeService(for: mode)
     }
 
-    static var live: AppDependencies {
-        AppDependencies(dataSourceMode: .live)
-    }
-
     static var preview: AppDependencies {
         AppDependencies(dataSourceMode: .sample)
-    }
-
-    var isUsingSampleData: Bool {
-        dataSourceMode == .sample
     }
 
     private static func makeService(for mode: DataSourceMode) -> any SpaceXServiceProtocol {

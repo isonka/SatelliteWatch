@@ -47,10 +47,6 @@ enum DataSourceMode: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var isNetworkBacked: Bool {
-        baseURLDescription != nil
-    }
-
     static func resolve(
         from arguments: [String],
         fallback: DataSourceMode = .live
