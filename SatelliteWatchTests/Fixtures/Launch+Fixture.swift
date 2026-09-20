@@ -11,7 +11,7 @@ extension Launch {
         dateUTC: Date = Date(timeIntervalSince1970: 1_583_556_631),
         datePrecision: DatePrecision? = .hour,
         links: LaunchLinks? = .fixture(),
-        rocket: RocketRef = .populated(.fixture()),
+        rocket: RocketRef? = .populated(.fixture()),
         launchpad: LaunchpadRef = .populated(.fixture())
     ) -> Launch {
         Launch(

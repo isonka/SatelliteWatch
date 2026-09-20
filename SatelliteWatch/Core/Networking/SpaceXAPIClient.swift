@@ -1,16 +1,18 @@
 import Foundation
 
 struct SpaceXAPIClient: SpaceXServiceProtocol {
-    private let session: URLSession
+    private let transport: @Sendable (URLRequest) async throws -> (Data, URLResponse)
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
     init(
-        session: URLSession = .shared,
+        transport: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = {
+            try await URLSession.shared.data(for: $0)
+        },
         decoder: JSONDecoder = SpaceXJSONDecoderFactory.make(),
         encoder: JSONEncoder = SpaceXJSONEncoderFactory.make()
     ) {
-        self.session = session
+        self.transport = transport
         self.decoder = decoder
         self.encoder = encoder
     }
@@ -89,7 +91,7 @@ struct SpaceXAPIClient: SpaceXServiceProtocol {
         let response: URLResponse
 
         do {
-            (data, response) = try await session.data(for: request)
+            (data, response) = try await transport(request)
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {

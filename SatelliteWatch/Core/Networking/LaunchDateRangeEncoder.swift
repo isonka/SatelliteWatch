@@ -1,7 +1,6 @@
 import Foundation
 
 enum LaunchDateRangeEncoder {
-    /// Inclusive local calendar days → UTC ISO-8601 bounds for `date_utc`.
     static func queryBounds(
         start: Date?,
         end: Date?,
@@ -34,5 +33,32 @@ enum LaunchDateRangeEncoder {
         }
 
         return (startUTC, endUTC)
+    }
+    
+    static func isWithinLocalDays(
+        _ date: Date,
+        start: Date?,
+        end: Date?,
+        calendar: Calendar = .current,
+        timeZone: TimeZone = .current
+    ) -> Bool {
+        var cal = calendar
+        cal.timeZone = timeZone
+
+        if let start, date < cal.startOfDay(for: start) {
+            return false
+        }
+
+        if let end {
+            let startOfEnd = cal.startOfDay(for: end)
+            guard let endExclusive = cal.date(byAdding: .day, value: 1, to: startOfEnd) else {
+                return true
+            }
+            if date >= endExclusive {
+                return false
+            }
+        }
+
+        return true
     }
 }

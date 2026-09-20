@@ -19,7 +19,7 @@ final class AppDependencies {
             from: ProcessInfo.processInfo.arguments
         )
         #else
-        let mode = DataSourceMode.live
+        let mode = dataSourceMode ?? .live
         #endif
         self.dataSourceMode = mode
         self.spaceXService = Self.makeService(for: mode)
@@ -41,6 +41,8 @@ final class AppDependencies {
         switch mode {
         case .live:
             SpaceXAPIClient()
+        case .mirror:
+            LaunchLibraryAPIClient(cacheDirectory: LaunchLibraryEndpoint.cacheDirectory)
         case .sample:
             MockSpaceXService()
         }
