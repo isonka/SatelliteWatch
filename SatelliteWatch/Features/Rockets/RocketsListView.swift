@@ -35,9 +35,10 @@ struct RocketsListView: View {
         }
         .navigationTitle("Rockets")
         .task(id: ObjectIdentifier(viewModel)) {
-            guard loadsOnAppear else { return }
-            guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
-            await viewModel.loadInitial()
+            await loadIfNeeded()
+        }
+        .onAppear {
+            Task { await loadIfNeeded() }
         }
     }
 
@@ -87,6 +88,12 @@ struct RocketsListView: View {
             RocketDetailView(rocket: rocket)
         }
         .accessibilityIdentifier("rockets-list")
+    }
+
+    private func loadIfNeeded() async {
+        guard loadsOnAppear else { return }
+        guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
+        await viewModel.loadInitial()
     }
 }
 

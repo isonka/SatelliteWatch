@@ -68,9 +68,10 @@ struct LaunchesListView: View {
             LaunchDateFilterView(viewModel: viewModel)
         }
         .task(id: ObjectIdentifier(viewModel)) {
-            guard loadsOnAppear else { return }
-            guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
-            await viewModel.loadInitial()
+            await loadIfNeeded()
+        }
+        .onAppear {
+            Task { await loadIfNeeded() }
         }
     }
 
@@ -120,6 +121,12 @@ struct LaunchesListView: View {
             LaunchDetailView(launch: launch)
         }
         .accessibilityIdentifier("launches-list")
+    }
+
+    private func loadIfNeeded() async {
+        guard loadsOnAppear else { return }
+        guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
+        await viewModel.loadInitial()
     }
 }
 

@@ -40,7 +40,7 @@ struct ContentView: View {
                     #endif
                 }
             }
-            .id(dependencies.dataSourceMode)
+            .id("launches-\(dependencies.dataSourceMode.rawValue)")
             .tabItem {
                 Label("Launches", systemImage: "airplane.departure")
             }
@@ -52,7 +52,7 @@ struct ContentView: View {
                     enablesPagination: true
                 )
             }
-            .id(dependencies.dataSourceMode)
+            .id("rockets-\(dependencies.dataSourceMode.rawValue)")
             .tabItem {
                 Label("Rockets", systemImage: "flame.fill")
             }
