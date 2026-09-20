@@ -55,13 +55,6 @@ struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
             return pad.displayName
         }
     }
-
-    var populatedRocket: Rocket? {
-        if case .populated(let rocket) = rocket {
-            return rocket
-        }
-        return nil
-    }
 }
 
 enum RocketRef: Codable, Sendable, Equatable, Hashable {

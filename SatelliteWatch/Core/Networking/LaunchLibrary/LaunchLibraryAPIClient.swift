@@ -2,13 +2,16 @@ import Foundation
 
 struct LaunchLibraryAPIClient: SpaceXServiceProtocol {
     private let http: HTTPClient
+    private let rocketCache: RocketIDCache
 
     init(http: HTTPClient = HTTPClient()) {
         self.http = http
+        self.rocketCache = RocketIDCache()
     }
 
     init(transport: @escaping HTTPClient.Transport) {
         self.http = HTTPClient(transport: transport)
+        self.rocketCache = RocketIDCache()
     }
 
     func fetchLaunches(
@@ -37,9 +40,31 @@ struct LaunchLibraryAPIClient: SpaceXServiceProtocol {
     }
 
     func fetchRocket(id: String) async throws -> Rocket {
+        if let cached = rocketCache.rocket(for: id) {
+            return cached
+        }
         let dto: LaunchLibraryRocketDTO = try await http.get(
             url: LaunchLibraryEndpoint.rocket(id: id).url
         )
-        return Rocket(library: dto)
+        let rocket = Rocket(library: dto)
+        rocketCache.store(rocket, for: id)
+        return rocket
+    }
+}
+
+private final class RocketIDCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var rockets: [String: Rocket] = [:]
+
+    func rocket(for id: String) -> Rocket? {
+        lock.lock()
+        defer { lock.unlock() }
+        return rockets[id]
+    }
+
+    func store(_ rocket: Rocket, for id: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        rockets[id] = rocket
     }
 }

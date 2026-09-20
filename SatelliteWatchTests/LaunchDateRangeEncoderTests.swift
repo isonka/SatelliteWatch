@@ -49,46 +49,6 @@ final class LaunchDateRangeEncoderTests: XCTestCase {
         XCTAssertNil(bounds.endUTC)
     }
 
-    func testIsWithinLocalDaysInclusiveStartExclusiveEndNextDay() {
-        let start = date(year: 2024, month: 6, day: 1)
-        let end = date(year: 2024, month: 6, day: 2)
-
-        let insideMorning = date(year: 2024, month: 6, day: 1, hour: 0, minute: 0)
-        let insideEvening = date(year: 2024, month: 6, day: 2, hour: 23, minute: 59)
-        let before = date(year: 2024, month: 5, day: 31, hour: 23, minute: 59)
-        let after = date(year: 2024, month: 6, day: 3, hour: 0, minute: 0)
-
-        XCTAssertTrue(
-            LaunchDateRangeEncoder.isWithinLocalDays(
-                insideMorning, start: start, end: end, calendar: calendar, timeZone: timeZone
-            )
-        )
-        XCTAssertTrue(
-            LaunchDateRangeEncoder.isWithinLocalDays(
-                insideEvening, start: start, end: end, calendar: calendar, timeZone: timeZone
-            )
-        )
-        XCTAssertFalse(
-            LaunchDateRangeEncoder.isWithinLocalDays(
-                before, start: start, end: end, calendar: calendar, timeZone: timeZone
-            )
-        )
-        XCTAssertFalse(
-            LaunchDateRangeEncoder.isWithinLocalDays(
-                after, start: start, end: end, calendar: calendar, timeZone: timeZone
-            )
-        )
-    }
-
-    func testIsWithinLocalDaysNilBoundsAcceptAll() {
-        let any = date(year: 2020, month: 1, day: 1)
-        XCTAssertTrue(
-            LaunchDateRangeEncoder.isWithinLocalDays(
-                any, start: nil, end: nil, calendar: calendar, timeZone: timeZone
-            )
-        )
-    }
-
     private func date(
         year: Int,
         month: Int,

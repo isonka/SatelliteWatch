@@ -2,12 +2,13 @@ import SwiftUI
 
 struct LaunchDetailView: View {
     let launch: Launch
+    let service: any SpaceXServiceProtocol
 
-    @Environment(AppDependencies.self) private var dependencies
     @State private var rocketViewModel: LaunchRocketViewModel
 
-    init(launch: Launch) {
+    init(launch: Launch, service: any SpaceXServiceProtocol) {
         self.launch = launch
+        self.service = service
         _rocketViewModel = State(initialValue: LaunchRocketViewModel(launch: launch))
     }
 
@@ -61,11 +62,8 @@ struct LaunchDetailView: View {
         .navigationTitle("Launch")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("launch-detail-\(launch.id)")
-        .navigationDestination(for: Rocket.self) { rocket in
-            RocketDetailView(rocket: rocket)
-        }
         .task {
-            await rocketViewModel.loadIfNeeded(using: dependencies.spaceXService)
+            await rocketViewModel.loadIfNeeded(using: service)
         }
     }
 
@@ -145,9 +143,10 @@ struct LaunchDetailView: View {
 #if DEBUG
 #Preview {
     NavigationStack {
-        LaunchDetailView(launch: MockSpaceXService.previewLaunches[0])
+        LaunchDetailView(
+            launch: MockSpaceXService.previewLaunches[0],
+            service: MockSpaceXService()
+        )
     }
-    .environment(AppDependencies.preview)
-    .environment(LaunchesViewModel.preview())
 }
 #endif

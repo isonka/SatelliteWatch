@@ -6,7 +6,7 @@ struct SatelliteWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(service: dependencies.spaceXService)
                 .environment(dependencies)
         }
     }

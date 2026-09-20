@@ -44,7 +44,8 @@ enum LaunchLibraryEndpoint {
                 URLQueryItem(name: "lsp__id", value: String(Self.spaceXAgencyID)),
                 URLQueryItem(name: "limit", value: String(max(1, limit))),
                 URLQueryItem(name: "offset", value: String(Self.offset(page: page, limit: limit))),
-                URLQueryItem(name: "ordering", value: "-net")
+                URLQueryItem(name: "ordering", value: "-net"),
+                URLQueryItem(name: "mode", value: "detailed")
             ]
             if let startUTC {
                 items.append(URLQueryItem(name: "net__gte", value: startUTC))

@@ -152,7 +152,7 @@ final class LaunchLibraryMappingTests: XCTestCase {
     // MARK: - Links
 
     func testMissionLinksDecodeFromBothStringAndObjectShapes() throws {
-        // `info_urls` is a bare string array, `vid_urls` an array of objects.
+        // Live LL2 puts `infoURLs` / `vidURLs` on the launch, not the mission.
         let mapped = try launches(from: LaunchLibraryJSONFixtures.upcomingLaunches, upcoming: true)
         let launch = try XCTUnwrap(mapped.first)
 

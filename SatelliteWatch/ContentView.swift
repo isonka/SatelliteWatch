@@ -2,33 +2,20 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppDependencies.self) private var dependencies
-    @State private var launchesViewModel: LaunchesViewModel?
-    @State private var rocketsViewModel: PaginatedListViewModel<Rocket>?
+    @State private var launchesViewModel: LaunchesViewModel
+    @State private var rocketsViewModel: PaginatedListViewModel<Rocket>
     @State private var selectedTab: AppTab = .launches
+    @State private var launchesPath = NavigationPath()
+    @State private var rocketsPath = NavigationPath()
 
-    var body: some View {
-        Group {
-            if let launchesViewModel, let rocketsViewModel {
-                tabs(launchesViewModel: launchesViewModel, rocketsViewModel: rocketsViewModel)
-                    .environment(launchesViewModel)
-            } else {
-                ProgressView()
-            }
-        }
-        .onChange(of: dependencies.dataSourceMode, initial: true) { _, _ in
-            let service = dependencies.spaceXService
-            launchesViewModel = LaunchesViewModel(service: service)
-            rocketsViewModel = PaginatedListViewModel(service: service)
-            selectedTab = .launches
-        }
+    init(service: any SpaceXServiceProtocol) {
+        _launchesViewModel = State(initialValue: LaunchesViewModel(service: service))
+        _rocketsViewModel = State(initialValue: PaginatedListViewModel(service: service))
     }
 
-    private func tabs(
-        launchesViewModel: LaunchesViewModel,
-        rocketsViewModel: PaginatedListViewModel<Rocket>
-    ) -> some View {
+    var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
+            NavigationStack(path: $launchesPath) {
                 LaunchesListView(
                     viewModel: launchesViewModel,
                     enablesPagination: true
@@ -40,24 +27,38 @@ struct ContentView: View {
                     }
                     #endif
                 }
+                .modifier(DetailDestinations(
+                    service: dependencies.spaceXService,
+                    launchesViewModel: launchesViewModel
+                ))
             }
-            .id("launches-\(dependencies.dataSourceMode.rawValue)")
             .tabItem {
                 Label("Launches", systemImage: "airplane.departure")
             }
             .tag(AppTab.launches)
 
-            NavigationStack {
+            NavigationStack(path: $rocketsPath) {
                 RocketsListView(
                     viewModel: rocketsViewModel,
                     enablesPagination: true
                 )
+                .modifier(DetailDestinations(
+                    service: dependencies.spaceXService,
+                    launchesViewModel: launchesViewModel
+                ))
             }
-            .id("rockets-\(dependencies.dataSourceMode.rawValue)")
             .tabItem {
                 Label("Rockets", systemImage: "flame.fill")
             }
             .tag(AppTab.rockets)
+        }
+        .onChange(of: dependencies.dataSourceMode) { _, _ in
+            let service = dependencies.spaceXService
+            launchesViewModel = LaunchesViewModel(service: service)
+            rocketsViewModel = PaginatedListViewModel(service: service)
+            launchesPath = NavigationPath()
+            rocketsPath = NavigationPath()
+            selectedTab = .launches
         }
     }
 
@@ -92,7 +93,23 @@ struct ContentView: View {
     #endif
 }
 
+private struct DetailDestinations: ViewModifier {
+    let service: any SpaceXServiceProtocol
+    let launchesViewModel: LaunchesViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .navigationDestination(for: Launch.self) { launch in
+                LaunchDetailView(launch: launch, service: service)
+            }
+            .navigationDestination(for: Rocket.self) { rocket in
+                RocketDetailView(rocket: rocket, launchesViewModel: launchesViewModel)
+            }
+    }
+}
+
 #Preview {
-    ContentView()
-        .environment(AppDependencies.preview)
+    let dependencies = AppDependencies.preview
+    ContentView(service: dependencies.spaceXService)
+        .environment(dependencies)
 }

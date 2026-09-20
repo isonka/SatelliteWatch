@@ -46,11 +46,6 @@ final class ModelHelpersTests: XCTestCase {
         XCTAssertNil(Launch.fixture(links: nil).patchImageURL)
     }
 
-    func testPopulatedRocketHelper() {
-        XCTAssertNotNil(Launch.fixture(rocket: .populated(.fixture())).populatedRocket)
-        XCTAssertNil(Launch.fixture(rocket: .id("x")).populatedRocket)
-    }
-
     func testLaunchpadDisplayNameFallback() {
         XCTAssertEqual(
             LaunchpadSummary.fixture(name: "Short", fullName: nil).displayName,

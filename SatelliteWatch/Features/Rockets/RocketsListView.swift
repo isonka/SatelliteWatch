@@ -79,9 +79,6 @@ struct RocketsListView: View {
         .refreshable {
             await viewModel.refresh()
         }
-        .navigationDestination(for: Rocket.self) { rocket in
-            RocketDetailView(rocket: rocket)
-        }
         .accessibilityIdentifier("rockets-list")
     }
 
@@ -98,8 +95,6 @@ struct RocketsListView: View {
             viewModel: .preview(rockets: [MockSpaceXService.previewRocket])
         )
     }
-    .environment(AppDependencies.preview)
-    .environment(LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches))
 }
 
 #Preview("Populated + loading more") {
@@ -112,7 +107,5 @@ struct RocketsListView: View {
             )
         )
     }
-    .environment(AppDependencies.preview)
-    .environment(LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches))
 }
 #endif

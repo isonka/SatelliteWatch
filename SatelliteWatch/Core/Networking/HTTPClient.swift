@@ -5,8 +5,18 @@ struct HTTPClient: Sendable {
 
     static let defaultUserAgent = "SatelliteWatch/1.0 (iOS)"
 
+    private static let cachedSession: URLSession = {
+        let cache = URLCache(
+            memoryCapacity: 8 * 1_024 * 1_024,
+            diskCapacity: 32 * 1_024 * 1_024
+        )
+        let configuration = URLSessionConfiguration.default
+        configuration.urlCache = cache
+        return URLSession(configuration: configuration)
+    }()
+
     static let defaultTransport: Transport = { request in
-        try await URLSession.shared.data(for: request)
+        try await cachedSession.data(for: request)
     }
 
     private let transport: Transport

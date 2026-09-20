@@ -1,3 +1,4 @@
+import os
 import XCTest
 @testable import SatelliteWatch
 
@@ -26,6 +27,7 @@ final class LaunchLibraryAPIClientTests: XCTestCase {
         XCTAssertEqual(request.queryValue("limit"), "1")
         XCTAssertEqual(request.queryValue("offset"), "0")
         XCTAssertEqual(request.queryValue("ordering"), "-net")
+        XCTAssertEqual(request.queryValue("mode"), "detailed")
         XCTAssertNil(request.queryValue("net__gte"))
         XCTAssertNil(request.queryValue("net__lte"))
     }
@@ -105,6 +107,20 @@ final class LaunchLibraryAPIClientTests: XCTestCase {
         XCTAssertEqual(request.httpMethod, "GET")
         XCTAssertEqual(request.url?.path, "/2.2.0/config/launcher/188")
         XCTAssertNil(request.url?.query)
+    }
+
+    func testFetchRocketCachesByID() async throws {
+        let transportCalls = OSAllocatedUnfairLock(initialState: 0)
+        let client = LaunchLibraryAPIClient { request in
+            transportCalls.withLock { $0 += 1 }
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rocketFalconHeavy)
+        }
+
+        let first = try await client.fetchRocket(id: "188")
+        let second = try await client.fetchRocket(id: "188")
+
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(transportCalls.withLock { $0 }, 1)
     }
 
     func testFetchRocketMissingIDReturns404() async {

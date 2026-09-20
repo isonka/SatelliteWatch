@@ -2,8 +2,7 @@ import SwiftUI
 
 struct RocketDetailView: View {
     let rocket: Rocket
-
-    @Environment(LaunchesViewModel.self) private var launchesViewModel
+    let launchesViewModel: LaunchesViewModel
 
     var body: some View {
         List {
@@ -53,9 +52,6 @@ struct RocketDetailView: View {
         .navigationTitle("Rocket")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("rocket-detail-\(rocket.id)")
-        .navigationDestination(for: Launch.self) { launch in
-            LaunchDetailView(launch: launch)
-        }
     }
 
     private var matchingLaunches: [Launch] {
@@ -93,9 +89,10 @@ struct RocketDetailView: View {
     let launchesViewModel = LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches)
 
     return NavigationStack {
-        RocketDetailView(rocket: MockSpaceXService.previewRocket)
+        RocketDetailView(
+            rocket: MockSpaceXService.previewRocket,
+            launchesViewModel: launchesViewModel
+        )
     }
-    .environment(AppDependencies.preview)
-    .environment(launchesViewModel)
 }
 #endif

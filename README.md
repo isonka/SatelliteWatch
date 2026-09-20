@@ -15,8 +15,9 @@ Open `SatelliteWatch.xcodeproj` and run the **SatelliteWatch** scheme.
 The SpaceX API is archived and currently returns HTTP 525.
 
 **Debug Run uses Launch Library 2 by default** so a fresh clone shows data immediately.
+Anonymous LL2 is **15 requests/hour**. Paging, refresh, and rocket-by-id all count.
 Switch sources from the Launches toolbar menu (SpaceX API / Launch Library 2 / Sample data).
-Offline or UI tests: Sample data (`-sampleData`).
+Engine details (`9 × merlin 1D+`) and a populated rocket with no extra GET are **Sample-only**: toolbar → Sample data, or `-sampleData`.
 Release builds always use the SpaceX API client.
 
 ## Architecture
@@ -32,7 +33,7 @@ Features/Rockets/         List and detail
 PreviewContent/           MockSpaceXService
 ```
 
-Both providers implement `SpaceXServiceProtocol`. `AppDependencies` picks the client and injects it at the app root. Tabs each own a `NavigationStack`. Lists get view models from `ContentView`. Launch detail reads the service from the environment when a launch only has a rocket id.
+Both providers implement `SpaceXServiceProtocol`. `AppDependencies` picks the client at the app root. Tabs each own a `NavigationStack` with Launch/Rocket destinations on the stack root. Lists and details receive view models and the service as arguments.
 
 ## Data sources
 
@@ -70,7 +71,7 @@ Paging matches the SpaceX client: `page` / `limit` from the list VM become `limi
 
 | Resource | Endpoint |
 |----------|----------|
-| Launches | `GET /2.2.0/launch/?lsp__id=121&limit=&offset=&ordering=-net` |
+| Launches | `GET /2.2.0/launch/?lsp__id=121&limit=&offset=&ordering=-net&mode=detailed` |
 | Launch date filter | `net__gte` / `net__lte` (same local-day UTC bounds as SpaceX) |
 | Rockets | `GET /2.2.0/config/launcher/?manufacturer__name=SpaceX&limit=&offset=&mode=detailed` |
 | Rocket by id | `GET /2.2.0/config/launcher/{id}/` |
@@ -90,6 +91,8 @@ Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launc
 **Paging:** one in-flight request, id dedupe, ignore stale generations, keep rows when an append fails. The inline error has a **Retry** footer that calls `retry()`; scrolling the last rows still works as a second path. SwiftUI `.task` cancellation ends the load when the list leaves the hierarchy for good. We do **not** cancel on `.onDisappear` (that also fires when pushing a detail or switching tabs).
 
 **Rocket Detail launches:** section titled “From loaded launches” — launches already in `LaunchesViewModel` that reference this rocket. Follows the current date filter and fetched pages. Not a per-rocket API query.
+
+**Caching:** `HTTPClient` uses a `URLSession` with `URLCache`. Launch Library also memoizes `fetchRocket(id:)` so opening several Falcon 9 launches does not burn the 15 req/hour quota.
 
 **Images:** `RemoteImageLoader` (in-memory cache, downsampled). Not `AsyncImage`.
 

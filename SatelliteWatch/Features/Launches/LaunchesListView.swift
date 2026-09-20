@@ -112,9 +112,6 @@ struct LaunchesListView: View {
         .refreshable {
             await viewModel.refresh()
         }
-        .navigationDestination(for: Launch.self) { launch in
-            LaunchDetailView(launch: launch)
-        }
         .accessibilityIdentifier("launches-list")
     }
 
@@ -130,8 +127,6 @@ struct LaunchesListView: View {
     return NavigationStack {
         LaunchesListView(viewModel: viewModel)
     }
-    .environment(AppDependencies.preview)
-    .environment(viewModel)
 }
 
 #Preview("Populated + loading more") {
@@ -143,8 +138,6 @@ struct LaunchesListView: View {
     return NavigationStack {
         LaunchesListView(viewModel: viewModel)
     }
-    .environment(AppDependencies.preview)
-    .environment(viewModel)
 }
 
 #Preview("Populated + inline error") {
@@ -156,8 +149,6 @@ struct LaunchesListView: View {
     return NavigationStack {
         LaunchesListView(viewModel: viewModel)
     }
-    .environment(AppDependencies.preview)
-    .environment(viewModel)
 }
 
 #Preview("Filtered empty") {
@@ -168,7 +159,5 @@ struct LaunchesListView: View {
     return NavigationStack {
         LaunchesListView(viewModel: viewModel)
     }
-    .environment(AppDependencies.preview)
-    .environment(viewModel)
 }
 #endif

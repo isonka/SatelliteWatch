@@ -38,9 +38,9 @@ extension Launch {
             datePrecision: DatePrecision(libraryAbbrev: dto.netPrecision?.abbrev),
             links: LaunchLinks(
                 patch: patch,
-                webcast: dto.mission?.vidURLs?.first?.url,
+                webcast: dto.vidURLs?.first?.url,
                 wikipedia: pad?.wikiURL,
-                article: dto.mission?.infoURLs?.first?.url
+                article: dto.infoURLs?.first?.url
             ),
             rocket: dto.rocket?.configuration.map { .id(String($0.id)) },
             launchpad: launchpad

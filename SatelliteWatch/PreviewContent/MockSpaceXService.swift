@@ -107,7 +107,7 @@ private extension MockSpaceXService {
                         small: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png",
                         large: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png"
                     ),
-                    webcast: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    webcast: "https://youtu.be/J442-ti-Dhg",
                     wikipedia: nil,
                     article: nil
                 ),

@@ -12,7 +12,11 @@ final class SpaceXJSONDecodingTests: XCTestCase {
         XCTAssertEqual(page.docs.count, 1)
         let launch = try XCTUnwrap(page.docs.first)
         XCTAssertEqual(launch.name, "Starlink-15 (v1.0)")
-        XCTAssertEqual(launch.populatedRocket?.name, "Falcon 9")
+        if case .populated(let rocket) = launch.rocket {
+            XCTAssertEqual(rocket.name, "Falcon 9")
+        } else {
+            XCTFail("Expected a populated rocket")
+        }
         XCTAssertEqual(launch.launchSiteName, "Kennedy Space Center Historic Launch Complex 39A")
         XCTAssertNotNil(launch.patchImageURL)
         XCTAssertEqual(launch.datePrecision, .hour)
@@ -27,7 +31,6 @@ final class SpaceXJSONDecodingTests: XCTestCase {
         let launch = try XCTUnwrap(page.docs.first)
         XCTAssertEqual(launch.rocket, .id("5e9d0d95eda69973a809d1ec"))
         XCTAssertEqual(launch.launchpad, .id("5e9e4502f509094188566f88"))
-        XCTAssertNil(launch.populatedRocket)
         XCTAssertEqual(launch.launchSiteName, "Unknown launch site")
     }
 

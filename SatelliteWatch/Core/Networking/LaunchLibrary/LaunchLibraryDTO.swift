@@ -44,6 +44,8 @@ struct LaunchLibraryLaunchDTO: Decodable, Sendable {
     let mission: Mission?
     let pad: Pad?
     let program: [Program]?
+    let infoURLs: [LaunchLibraryLink]?
+    let vidURLs: [LaunchLibraryLink]?
 
     struct Status: Decodable, Sendable {
         let id: Int?
@@ -72,14 +74,6 @@ struct LaunchLibraryLaunchDTO: Decodable, Sendable {
 
     struct Mission: Decodable, Sendable {
         let description: String?
-        let infoURLs: [LaunchLibraryLink]?
-        let vidURLs: [LaunchLibraryLink]?
-
-        enum CodingKeys: String, CodingKey {
-            case description
-            case infoURLs = "info_urls"
-            case vidURLs = "vid_urls"
-        }
     }
 
     struct Pad: Decodable, Sendable {
@@ -135,6 +129,8 @@ struct LaunchLibraryLaunchDTO: Decodable, Sendable {
         case mission
         case pad
         case program
+        case infoURLs
+        case vidURLs
     }
 }
 

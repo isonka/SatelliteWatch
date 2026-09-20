@@ -182,10 +182,10 @@ enum LaunchLibraryJSONFixtures {
             "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
           },
           "mission": {
-            "description": "Crew rotation",
-            "info_urls": ["https://example.com/info"],
-            "vid_urls": [{ "url": "https://example.com/vid" }]
+            "description": "Crew rotation"
           },
+          "infoURLs": ["https://example.com/info"],
+          "vidURLs": [{ "url": "https://example.com/vid" }],
           "pad": {
             "id": 87,
             "name": "LC-39A",
@@ -215,10 +215,10 @@ enum LaunchLibraryJSONFixtures {
             "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
           },
           "mission": {
-            "description": "Starlink mission",
-            "info_urls": null,
-            "vid_urls": null
+            "description": "Starlink mission"
           },
+          "infoURLs": null,
+          "vidURLs": null,
           "pad": {
             "id": 80,
             "name": "SLC-40",
@@ -297,10 +297,10 @@ enum LaunchLibraryJSONFixtures {
             "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
           },
           "mission": {
-            "description": "Crew rotation",
-            "info_urls": ["https://example.com/info"],
-            "vid_urls": [{ "url": "https://example.com/vid" }]
+            "description": "Crew rotation"
           },
+          "infoURLs": ["https://example.com/info"],
+          "vidURLs": [{ "url": "https://example.com/vid" }],
           "pad": {
             "id": 87,
             "name": "LC-39A",
@@ -327,10 +327,10 @@ enum LaunchLibraryJSONFixtures {
             "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
           },
           "mission": {
-            "description": "Starlink mission",
-            "info_urls": null,
-            "vid_urls": null
+            "description": "Starlink mission"
           },
+          "infoURLs": null,
+          "vidURLs": null,
           "pad": {
             "id": 80,
             "name": "SLC-40",
@@ -355,7 +355,9 @@ enum LaunchLibraryJSONFixtures {
           "rocket": {
             "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
           },
-          "mission": { "description": null, "info_urls": null, "vid_urls": null },
+          "mission": { "description": null },
+          "infoURLs": null,
+          "vidURLs": null,
           "pad": {
             "id": 87,
             "name": "LC-39A",
