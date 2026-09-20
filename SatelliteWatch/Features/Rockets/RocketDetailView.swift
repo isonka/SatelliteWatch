@@ -12,6 +12,7 @@ struct RocketDetailView: View {
                     Text(rocket.name)
                         .font(AppFont.title)
                         .foregroundStyle(AppColor.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     labeledRow("Type", rocket.type ?? "Unknown")
                     labeledRow("Status", activeText)
@@ -20,6 +21,7 @@ struct RocketDetailView: View {
                     Text(descriptionText)
                         .font(AppFont.body)
                         .foregroundStyle(hasDescription ? AppColor.primaryText : AppColor.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, Spacing.lg)
             }
@@ -61,7 +63,10 @@ struct RocketDetailView: View {
             Text(value)
                 .font(AppFont.subheadline)
                 .foregroundStyle(AppColor.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(value)")
     }
 }
 

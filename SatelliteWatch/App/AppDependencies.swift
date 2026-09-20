@@ -13,9 +13,11 @@ final class AppDependencies {
 
     private(set) var spaceXService: any SpaceXServiceProtocol
 
-    init(dataSourceMode: DataSourceMode = .live) {
+    init(dataSourceMode: DataSourceMode? = nil) {
         #if DEBUG
-        let mode = dataSourceMode
+        let mode = dataSourceMode ?? DataSourceMode.resolve(
+            from: ProcessInfo.processInfo.arguments
+        )
         #else
         let mode = DataSourceMode.live
         #endif

@@ -71,6 +71,7 @@ struct RocketsListView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.sm)
                 .listRowSeparator(.hidden)
+                .accessibilityIdentifier("rockets-loading-more")
             }
 
             if let errorMessage = viewModel.errorMessage, !viewModel.items.isEmpty {
@@ -79,6 +80,7 @@ struct RocketsListView: View {
                     .foregroundStyle(AppColor.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, Spacing.xs)
+                    .accessibilityIdentifier("rockets-inline-error")
             }
         }
         .listStyle(.plain)

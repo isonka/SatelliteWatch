@@ -13,9 +13,11 @@ struct RocketRowView: View {
                 Text(rocket.name)
                     .font(AppFont.headline)
                     .foregroundStyle(AppColor.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(rocket.type ?? "Unknown type")
                     .font(AppFont.subheadline)
                     .foregroundStyle(AppColor.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(successRateText)
                     .font(AppFont.caption)
                     .foregroundStyle(AppColor.secondaryText)
@@ -23,6 +25,8 @@ struct RocketRowView: View {
         }
         .padding(.vertical, Spacing.xs)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(rocket.name), \(rocket.type ?? "unknown type"), \(successRateText)")
+        .accessibilityHint("Opens rocket details")
         .accessibilityIdentifier("rocket-row-\(rocket.id)")
     }
 

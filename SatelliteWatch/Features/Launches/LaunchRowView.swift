@@ -9,22 +9,36 @@ struct LaunchRowView: View {
                 Text(launch.name)
                     .font(AppFont.headline)
                     .foregroundStyle(AppColor.primaryText)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: Spacing.sm)
                 StatusBadge(status: launch.status)
+                    .fixedSize()
             }
 
             Text(launch.launchSiteName)
                 .font(AppFont.subheadline)
                 .foregroundStyle(AppColor.secondaryText)
-                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(DateFormatting.display(date: launch.dateUTC, precision: launch.datePrecision))
                 .font(AppFont.caption)
                 .foregroundStyle(AppColor.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, Spacing.xs)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityHint("Opens launch details")
+        .accessibilityIdentifier("launch-row-\(launch.id)")
+    }
+
+    private var accessibilityDescription: String {
+        [
+            launch.name,
+            launch.status.title,
+            launch.launchSiteName,
+            DateFormatting.display(date: launch.dateUTC, precision: launch.datePrecision)
+        ].joined(separator: ", ")
     }
 }
 

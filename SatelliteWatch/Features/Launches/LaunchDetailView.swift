@@ -13,8 +13,10 @@ struct LaunchDetailView: View {
                         Text(launch.name)
                             .font(AppFont.title)
                             .foregroundStyle(AppColor.primaryText)
+                            .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: Spacing.sm)
                         StatusBadge(status: launch.status)
+                            .fixedSize()
                     }
 
                     labeledRow("Launch site", launch.launchSiteName)
@@ -27,6 +29,7 @@ struct LaunchDetailView: View {
                         .font(AppFont.body)
                         .foregroundStyle(hasDescription ? AppColor.primaryText : AppColor.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, Spacing.lg)
 
@@ -57,6 +60,7 @@ struct LaunchDetailView: View {
         }
         .navigationTitle("Launch")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("launch-detail-\(launch.id)")
         .navigationDestination(for: Rocket.self) { rocket in
             RocketDetailView(rocket: rocket)
         }
@@ -78,7 +82,10 @@ struct LaunchDetailView: View {
             Text(value)
                 .font(AppFont.subheadline)
                 .foregroundStyle(AppColor.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(value)")
     }
 }
 

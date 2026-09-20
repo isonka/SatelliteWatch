@@ -123,6 +123,7 @@ struct LaunchesListView: View {
         .navigationDestination(for: Launch.self) { launch in
             LaunchDetailView(launch: launch)
         }
+        .accessibilityIdentifier("launches-list")
     }
 }
 

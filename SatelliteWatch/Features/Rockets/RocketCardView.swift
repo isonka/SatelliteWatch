@@ -13,9 +13,11 @@ struct RocketCardView: View {
                 Text(rocket.name)
                     .font(AppFont.headline)
                     .foregroundStyle(AppColor.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(rocket.type ?? "Unknown type")
                     .font(AppFont.subheadline)
                     .foregroundStyle(AppColor.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Tap for rocket details")
                     .font(AppFont.caption)
                     .foregroundStyle(.tint)
@@ -31,6 +33,7 @@ struct RocketCardView: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: CornerRadius.md))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Rocket \(rocket.name), type \(rocket.type ?? "unknown")")
+        .accessibilityHint("Opens rocket details")
         .accessibilityIdentifier("rocket-card-\(rocket.id)")
     }
 }

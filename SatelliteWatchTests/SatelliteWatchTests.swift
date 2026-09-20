@@ -20,4 +20,12 @@ struct SatelliteWatchTests {
         dependencies.dataSourceMode = .live
         #expect(dependencies.spaceXService is SpaceXAPIClient)
     }
+
+    @Test func sampleDataLaunchArgumentResolvesToSampleMode() {
+        #expect(DataSourceMode.resolve(from: ["-sampleData"]) == .sample)
+    }
+
+    @Test func missingSampleDataLaunchArgumentResolvesToLive() {
+        #expect(DataSourceMode.resolve(from: ["-foo"]) == .live)
+    }
 }

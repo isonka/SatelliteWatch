@@ -9,6 +9,7 @@ struct LoadingStateView: View {
         } description: {
             Text(message)
         }
+        .accessibilityIdentifier("loading-state")
     }
 }
 
@@ -25,6 +26,7 @@ struct EmptyStateView: View {
                 Text(description)
             }
         }
+        .accessibilityIdentifier("empty-state")
     }
 }
 
@@ -40,6 +42,7 @@ struct ErrorStateView: View {
         } actions: {
             Button("Retry", action: retry)
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("retry-button")
         }
     }
 }
