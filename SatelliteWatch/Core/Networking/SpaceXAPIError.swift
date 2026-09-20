@@ -45,9 +45,10 @@ enum SpaceXAPIError: Error, Equatable, LocalizedError, Sendable {
             return "The requested data could not be found."
         case 408, 429:
             return "The service is busy. Please wait a moment and try again."
-        case 525:
-            return "The SpaceX API is archived and returned HTTP 525. In Debug, use the toolbar data-source menu and switch to Launch Library 2."
         case 500...599:
+            if code == 525 {
+                return "The SpaceX API is archived and returned HTTP 525. In Debug, use the toolbar data-source menu and switch to Launch Library 2."
+            }
             return "SpaceX data is temporarily unavailable. Please try again later."
         default:
             return "Unable to load data right now. Please try again."
