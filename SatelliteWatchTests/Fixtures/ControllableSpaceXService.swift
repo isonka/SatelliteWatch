@@ -5,8 +5,11 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
     var launchesPages: [Int: PaginatedResponse<Launch>] = [:]
     var rocketsPages: [Int: PaginatedResponse<Rocket>] = [:]
     var failOnPage: Int?
+    var rocketError: Error?
     var delayNanoseconds: UInt64 = 0
     private(set) var launchFetchCount = 0
+    private(set) var rocketFetchCount = 0
+    private(set) var lastRocketID: String?
     private(set) var lastStartDate: Date?
     private(set) var lastEndDate: Date?
 
@@ -50,6 +53,12 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
     }
 
     func fetchRocket(id: String) async throws -> Rocket {
-        .fixture(id: id)
+        rocketFetchCount += 1
+        lastRocketID = id
+
+        if let rocketError {
+            throw rocketError
+        }
+        return .fixture(id: id)
     }
 }

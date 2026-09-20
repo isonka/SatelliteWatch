@@ -37,6 +37,21 @@ struct SpaceXModelsDecodingTests {
         #expect(response.docs[0].primaryImageURL != nil)
     }
 
+    @Test func decodesSparsePaginationEnvelope() throws {
+        let json = """
+        { "docs": [], "page": 3, "hasNextPage": true }
+        """.data(using: .utf8)!
+
+        let response = try SpaceXJSONDecoderFactory.make()
+            .decode(PaginatedResponse<Rocket>.self, from: json)
+
+        #expect(response.docs.isEmpty)
+        #expect(response.page == 3)
+        #expect(response.hasNextPage)
+        #expect(response.totalDocs == 0)
+        #expect(response.hasPrevPage == false)
+    }
+
     @Test func fixtureBuildsLaunchForDirectUse() {
         let launch = Launch.fixture(success: nil, upcoming: true)
         #expect(launch.upcoming)

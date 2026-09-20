@@ -6,7 +6,8 @@ struct SatelliteWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(dependencies: dependencies)
+            ContentView()
+                .environment(dependencies)
         }
     }
 }

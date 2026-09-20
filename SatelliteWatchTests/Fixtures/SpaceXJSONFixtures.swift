@@ -67,6 +67,19 @@ enum SpaceXJSONFixtures {
     }
     """.data(using: .utf8)!
 
+    static let rocket = """
+    {
+      "id": "falcon9",
+      "name": "Falcon 9",
+      "type": "rocket",
+      "active": true,
+      "description": "Two-stage rocket",
+      "success_rate_pct": 98,
+      "flickr_images": ["https://example.com/f9.jpg"],
+      "engines": { "number": 9, "type": "merlin", "version": "1D+" }
+    }
+    """.data(using: .utf8)!
+
     static let rocketPage = """
     {
       "docs": [

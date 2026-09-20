@@ -44,7 +44,7 @@ final class LaunchesViewModel: PaginatedListViewModel<Launch> {
     init(service: any SpaceXServiceProtocol, pageSize: Int = 20) {
         let filterBox = FilterBox()
         self.filterBox = filterBox
-        super.init(pageSize: pageSize) { page, limit in
+        super.init(pageSize: pageSize) { @MainActor page, limit in
             try await service.fetchLaunches(
                 page: page,
                 limit: limit,
@@ -75,7 +75,8 @@ final class LaunchesViewModel: PaginatedListViewModel<Launch> {
     }
 }
 
-private final class FilterBox: @unchecked Sendable {
+@MainActor
+private final class FilterBox {
     var startDate: Date?
     var endDate: Date?
 }
