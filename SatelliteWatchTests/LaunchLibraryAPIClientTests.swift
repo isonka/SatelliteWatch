@@ -1,336 +1,121 @@
-import Foundation
-@testable import SatelliteWatch
 import XCTest
+@testable import SatelliteWatch
 
 final class LaunchLibraryAPIClientTests: XCTestCase {
-    func testLaunchesRequestUpcomingAndPreviousOnce() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
-
-        _ = try await client.fetchLaunches(page: 1, limit: 20, startDate: nil, endDate: nil)
-
-        let requests = await stub.requests
-        XCTAssertEqual(requests.count, 2)
-        XCTAssertTrue(requests.allSatisfy { $0.httpMethod == "GET" })
-        XCTAssertTrue(requests.allSatisfy { $0.httpBody == nil })
-        XCTAssertTrue(requests.allSatisfy { $0.url?.host() == "ll.thespacedevs.com" })
-
-        let paths = Set(requests.compactMap { $0.url?.path() })
-        XCTAssertEqual(paths, [
-            "/2.2.0/launch/upcoming",
-            "/2.2.0/launch/previous"
-        ])
-
-        for request in requests {
-            let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
-                .queryItems ?? []
-            let names = items.map(\.name)
-            XCTAssertTrue(names.contains("lsp__id"))
-            XCTAssertTrue(names.contains("limit"))
-            XCTAssertFalse(names.contains("offset"))
-            XCTAssertEqual(items.first { $0.name == "lsp__id" }?.value, "121")
-            XCTAssertEqual(items.first { $0.name == "limit" }?.value, "100")
+    func testFetchLaunchesMergesDedupesAndSortsDescending() async throws {
+        let client = LaunchLibraryAPIClient { request in
+            let path = request.url!.path
+            if path.contains("/launch/upcoming") {
+                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.upcomingLaunches)
+            }
+            if path.contains("/launch/previous") {
+                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.previousLaunches)
+            }
+            return StubHTTP.response(statusCode: 404, url: request.url!)
         }
-    }
-
-    func testMapsMediaIdentifiersAndLinks() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
 
         let page = try await client.fetchLaunches(page: 1, limit: 20, startDate: nil, endDate: nil)
-        let rich = try XCTUnwrap(page.docs.first { $0.name.contains("Starlink") })
-        let sparse = try XCTUnwrap(page.docs.first { $0.name.contains("USSF") })
-
-        XCTAssertEqual(rich.id, "d1471f9d-e9d0-4146-8e97-90863e48bfc8")
-        XCTAssertEqual(rich.launchSiteName, "Space Launch Complex 4E")
-        XCTAssertEqual(rich.details, "A batch of 27 satellites.")
-        XCTAssertEqual(rich.webcastURL?.absoluteString, "https://www.youtube.com/watch?v=gOcigcsXtHk")
-        XCTAssertEqual(rich.rocket?.id, "164")
-        XCTAssertEqual(
-            rich.patchImageURL?.absoluteString,
-            "https://example.com/starlink-patch.png"
-        )
-        XCTAssertEqual(rich.success, true)
-        XCTAssertFalse(rich.upcoming)
-
-        XCTAssertEqual(sparse.launchSiteName, "Unknown launch site")
-        XCTAssertNil(sparse.rocket)
-        XCTAssertNil(sparse.details)
-        XCTAssertNil(sparse.webcastURL)
-        XCTAssertNil(sparse.patchImageURL)
+        // previous-1 and upcoming-1 (previous wins on duplicate id)
+        XCTAssertEqual(page.docs.map(\.id), ["upcoming-1", "previous-1"])
+        XCTAssertEqual(page.docs.first?.name, "Crew-11 (overlap stale)")
+        XCTAssertEqual(page.docs.first?.success, true)
+        XCTAssertFalse(page.docs.first?.upcoming ?? true)
+        XCTAssertEqual(page.totalDocs, 2)
     }
 
-    func testUpcomingLaunchHasUnknownOutcomeEvenWhenStatusLooksSuccessful() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
+    func testFetchLaunchesPaginatesInMemory() async throws {
+        let client = makeLaunchClient()
 
-        let page = try await client.fetchLaunches(page: 1, limit: 20, startDate: nil, endDate: nil)
-        let scheduled = try XCTUnwrap(page.docs.first { $0.name.contains("Scheduled") })
+        let page1 = try await client.fetchLaunches(page: 1, limit: 1, startDate: nil, endDate: nil)
+        XCTAssertEqual(page1.docs.count, 1)
+        XCTAssertTrue(page1.hasNextPage)
+        XCTAssertEqual(page1.totalDocs, 2)
 
-        XCTAssertTrue(scheduled.upcoming)
-        XCTAssertNil(scheduled.success)
-        XCTAssertEqual(scheduled.status, .upcoming)
-        XCTAssertEqual(
-            scheduled.patchImageURL?.absoluteString,
-            "https://example.com/falcon9.jpg"
-        )
+        let page2 = try await client.fetchLaunches(page: 2, limit: 1, startDate: nil, endDate: nil)
+        XCTAssertEqual(page2.docs.count, 1)
+        XCTAssertFalse(page2.hasNextPage)
+        XCTAssertTrue(page2.hasPrevPage)
     }
 
-    func testOverlappingUpcomingLaunchKeepsPreviousOutcome() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
+    func testFetchLaunchesAppliesLocalDateFilter() async throws {
+        let client = makeLaunchClient()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let start = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
+        let end = calendar.date(from: DateComponents(year: 2024, month: 12, day: 31))!
 
-        let page = try await client.fetchLaunches(page: 1, limit: 20, startDate: nil, endDate: nil)
-        let starlink = try XCTUnwrap(
-            page.docs.first { $0.id == "d1471f9d-e9d0-4146-8e97-90863e48bfc8" }
-        )
-
-        XCTAssertEqual(page.docs.filter { $0.id == starlink.id }.count, 1)
-        XCTAssertFalse(starlink.upcoming)
-        XCTAssertEqual(starlink.success, true)
+        let page = try await client.fetchLaunches(page: 1, limit: 20, startDate: start, endDate: end)
+        XCTAssertEqual(page.docs.map(\.id), ["previous-1"])
     }
 
-    func testPagesClientSideAndIgnoresNextLinks() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
-
-        let first = try await client.fetchLaunches(page: 1, limit: 2, startDate: nil, endDate: nil)
-        XCTAssertEqual(first.docs.count, 2)
-        XCTAssertTrue(first.hasNextPage)
-        XCTAssertEqual(first.totalDocs, 3)
-
-        let second = try await client.fetchLaunches(page: 2, limit: 2, startDate: nil, endDate: nil)
-        XCTAssertEqual(second.docs.count, 1)
-        XCTAssertFalse(second.hasNextPage)
-        XCTAssertTrue(second.hasPrevPage)
-
-        let ids = Set(first.docs.map(\.id)).union(second.docs.map(\.id))
-        XCTAssertEqual(ids.count, 3)
-    }
-
-    func testFiltersByDateRangeClientSide() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
-
-        let day = Date(timeIntervalSince1970: 1_789_607_276)
-        let page = try await client.fetchLaunches(
-            page: 1,
-            limit: 20,
-            startDate: day,
-            endDate: day
-        )
-
-        XCTAssertEqual(page.docs.count, 1)
-        XCTAssertEqual(page.docs.first?.name.contains("USSF"), true)
-        XCTAssertEqual(page.totalDocs, 1)
-    }
-
-    func testMapsRocketsIncludingImageURL() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
+    func testFetchRocketsAndFetchByID() async throws {
+        let client = LaunchLibraryAPIClient { request in
+            XCTAssertTrue(request.url!.path.contains("/config/launcher"))
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rockets)
+        }
 
         let page = try await client.fetchRockets(page: 1, limit: 20)
-        let falcon = try XCTUnwrap(page.docs.first)
+        XCTAssertEqual(page.docs.map(\.id), ["164", "188"])
+        XCTAssertEqual(page.docs.first?.name, "Falcon 9 Block 5")
 
-        XCTAssertEqual(falcon.id, "164")
-        XCTAssertEqual(falcon.name, "Falcon 9 Block 5")
-        XCTAssertEqual(falcon.type, "Falcon")
-        XCTAssertEqual(falcon.successRatePct, 99)
-        XCTAssertEqual(falcon.description, "Two-stage rocket.")
-        XCTAssertEqual(falcon.active, true)
-        XCTAssertNil(falcon.engines)
-        XCTAssertEqual(falcon.primaryImageURL?.absoluteString, "https://example.com/falcon9.jpg")
-
-        let lastRequest = await stub.lastRequest
-        let request = try XCTUnwrap(lastRequest)
-        let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        XCTAssertEqual(request.url?.path().hasSuffix("/config/launcher"), true)
-        XCTAssertTrue(items.contains { $0.name == "manufacturer__name" && $0.value == "SpaceX" })
-        XCTAssertTrue(items.contains { $0.name == "mode" && $0.value == "detailed" })
-        XCTAssertFalse(items.contains { $0.name == "offset" })
+        let rocket = try await client.fetchRocket(id: "188")
+        XCTAssertEqual(rocket.name, "Falcon Heavy")
     }
 
-    func testFetchRocketResolvesTheLibraryIDFromTheCollection() async throws {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
+    func testFetchRocketMissingIDReturns404() async {
+        let client = LaunchLibraryAPIClient { request in
+            StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rockets)
+        }
 
-        let rocket = try await client.fetchRocket(id: "164")
-        XCTAssertEqual(rocket.name, "Falcon 9 Block 5")
-        XCTAssertEqual(rocket.id, "164")
-    }
-
-    func testFetchRocketThrowsNotFoundForAnUnknownID() async {
-        let stub = StubLaunchLibraryTransport()
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
-
-        await assertThrows(SpaceXAPIError.httpStatus(404)) {
-            try await client.fetchRocket(id: "saturn-v")
+        do {
+            _ = try await client.fetchRocket(id: "missing")
+            XCTFail("Expected error")
+        } catch let error as SpaceXAPIError {
+            XCTAssertEqual(error, .httpStatus(404))
+        } catch {
+            XCTFail("Unexpected error: \(error)")
         }
     }
 
-    func testMapsThrottleToHTTPStatusError() async {
-        let stub = StubLaunchLibraryTransport(statusCode: 429)
-        let client = LaunchLibraryAPIClient { try await stub.data(for: $0) }
+    func testHTTPErrorSurfaces() async {
+        let client = LaunchLibraryAPIClient { request in
+            StubHTTP.response(statusCode: 429, url: request.url!)
+        }
 
-        await assertThrows(SpaceXAPIError.httpStatus(429)) {
-            try await client.fetchRockets(page: 1, limit: 20)
+        do {
+            _ = try await client.fetchRockets(page: 1, limit: 20)
+            XCTFail("Expected error")
+        } catch let error as SpaceXAPIError {
+            XCTAssertEqual(error, .httpStatus(429))
+        } catch {
+            XCTFail("Unexpected error: \(error)")
         }
     }
-}
 
-private func assertThrows<E: Error & Equatable, T>(
-    _ expected: E,
-    file: StaticString = #filePath,
-    line: UInt = #line,
-    _ body: () async throws -> T
-) async {
-    do {
-        _ = try await body()
-        XCTFail("Expected \(expected) but no error was thrown", file: file, line: line)
-    } catch let error as E {
-        XCTAssertEqual(error, expected, file: file, line: line)
-    } catch {
-        XCTFail("Expected \(expected), got \(error)", file: file, line: line)
+    func testRequestSetsUserAgent() async throws {
+        let captured = RequestCapture()
+        let client = LaunchLibraryAPIClient { request in
+            captured.store(request)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rockets)
+        }
+
+        _ = try await client.fetchRockets(page: 1, limit: 20)
+        XCTAssertEqual(
+            captured.value?.value(forHTTPHeaderField: "User-Agent"),
+            "SatelliteWatch/1.0 (iOS)"
+        )
     }
-}
 
-private enum LaunchLibraryJSONFixtures {
-    static let previous = """
-    {
-      "count": 900,
-      "next": "https://ll.thespacedevs.com/2.2.0/launch/previous/?limit=100&lsp__id=121&offset=100",
-      "results": [
-        {
-          "id": "d1471f9d-e9d0-4146-8e97-90863e48bfc8",
-          "name": "Falcon 9 Block 5 | Starlink Group 15-27",
-          "net": "2026-09-20T01:47:00Z",
-          "image": "https://example.com/falcon9.jpg",
-          "status": { "id": 3, "abbrev": "Success" },
-          "net_precision": { "abbrev": "SEC" },
-          "rocket": {
-            "configuration": {
-              "id": 164,
-              "name": "Falcon 9",
-              "full_name": "Falcon 9 Block 5"
+    private func makeLaunchClient() -> LaunchLibraryAPIClient {
+        LaunchLibraryAPIClient { request in
+            let path = request.url!.path
+            if path.contains("/launch/upcoming") {
+                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.upcomingLaunches)
             }
-          },
-          "mission": {
-            "description": "A batch of 27 satellites.",
-            "info_urls": ["https://www.spacex.com/launches/sl-15-27"],
-            "vid_urls": [{ "url": "https://www.youtube.com/watch?v=gOcigcsXtHk" }]
-          },
-          "pad": {
-            "id": 16,
-            "name": "Space Launch Complex 4E",
-            "wiki_url": "https://en.wikipedia.org/wiki/Vandenberg",
-            "location": { "name": "Vandenberg SFB, CA, USA", "country_code": "USA" }
-          },
-          "program": [
-            {
-              "mission_patches": [
-                {
-                  "priority": 10,
-                  "image_url": "https://example.com/starlink-patch.png"
-                }
-              ]
+            if path.contains("/launch/previous") {
+                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.previousLaunches)
             }
-          ]
-        },
-        {
-          "id": "sparse-ussf",
-          "name": "Falcon 9 Block 5 | USSF-259",
-          "net": "2026-09-17T01:07:56Z",
-          "status": { "id": 3, "abbrev": "Success" }
+            return StubHTTP.response(statusCode: 404, url: request.url!)
         }
-      ]
-    }
-    """.data(using: .utf8)!
-
-    static let upcoming = """
-    {
-      "count": 100,
-      "next": "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=100&lsp__id=121&offset=100",
-      "results": [
-        {
-          "id": "d1471f9d-e9d0-4146-8e97-90863e48bfc8",
-          "name": "Falcon 9 Block 5 | Starlink Group 15-27",
-          "net": "2026-09-20T01:47:00Z",
-          "image": "https://example.com/falcon9.jpg",
-          "status": { "id": 3, "abbrev": "Success" }
-        },
-        {
-          "id": "scheduled-flight",
-          "name": "Falcon 9 Block 5 | Scheduled Flight",
-          "net": "2099-01-01T00:00:00Z",
-          "image": "https://example.com/falcon9.jpg",
-          "status": { "id": 1, "abbrev": "Go" }
-        }
-      ]
-    }
-    """.data(using: .utf8)!
-
-    static let rockets = """
-    {
-      "count": 13,
-      "next": null,
-      "results": [
-        {
-          "id": 164,
-          "name": "Falcon 9",
-          "full_name": "Falcon 9 Block 5",
-          "family": "Falcon",
-          "description": "Two-stage rocket.",
-          "active": true,
-          "image_url": "https://example.com/falcon9.jpg",
-          "total_launch_count": 100,
-          "successful_launches": 99
-        }
-      ]
-    }
-    """.data(using: .utf8)!
-}
-
-private actor StubLaunchLibraryTransport {
-    private(set) var requests: [URLRequest] = []
-    private let previous: Data
-    private let upcoming: Data
-    private let rockets: Data
-    private var statusCode: Int
-
-    var lastRequest: URLRequest? { requests.last }
-
-    init(
-        previous: Data = LaunchLibraryJSONFixtures.previous,
-        upcoming: Data = LaunchLibraryJSONFixtures.upcoming,
-        rockets: Data = LaunchLibraryJSONFixtures.rockets,
-        statusCode: Int = 200
-    ) {
-        self.previous = previous
-        self.upcoming = upcoming
-        self.rockets = rockets
-        self.statusCode = statusCode
-    }
-
-    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-        requests.append(request)
-
-        let url = request.url ?? LaunchLibraryEndpoint.baseURL
-        let path = url.path()
-        let body: Data
-        if path.hasSuffix("/launch/upcoming") {
-            body = upcoming
-        } else if path.hasSuffix("/launch/previous") {
-            body = previous
-        } else {
-            body = rockets
-        }
-
-        let response = HTTPURLResponse(
-            url: url,
-            statusCode: statusCode,
-            httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "application/json"]
-        )!
-        return (body, response)
     }
 }

@@ -7,10 +7,10 @@ extension Rocket {
         name: String = "Falcon 9",
         type: String? = "rocket",
         active: Bool? = true,
-        description: String? = "Reusable rocket",
-        successRatePct: Double? = 97,
-        flickrImages: [String]? = ["https://example.com/rocket.jpg"],
-        engines: RocketEngines? = .fixture()
+        description: String? = "Two-stage orbital rocket.",
+        successRatePct: Double? = 98,
+        flickrImages: [String]? = ["https://farm1.staticflickr.com/929/example.jpg"],
+        engines: RocketEngines? = RocketEngines(number: 9, type: "merlin", version: "1D+")
     ) -> Rocket {
         Rocket(
             id: id,
@@ -22,15 +22,5 @@ extension Rocket {
             flickrImages: flickrImages,
             engines: engines
         )
-    }
-}
-
-extension RocketEngines {
-    static func fixture(
-        number: Int? = 9,
-        type: String? = "merlin",
-        version: String? = "1D+"
-    ) -> RocketEngines {
-        RocketEngines(number: number, type: type, version: version)
     }
 }

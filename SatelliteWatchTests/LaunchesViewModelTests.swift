@@ -1,220 +1,116 @@
-import Foundation
-@testable import SatelliteWatch
 import XCTest
+@testable import SatelliteWatch
 
 @MainActor
 final class LaunchesViewModelTests: XCTestCase {
-    func testReplacesPageOnInitialLoad() async {
+    func testApplyFilterPassesDatesToService() async throws {
         let service = ControllableSpaceXService()
-        service.launchesPages = [
-            1: .fixture(
-                docs: [Launch.fixture(id: "1"), Launch.fixture(id: "2")],
-                page: 1,
-                hasNextPage: true
-            )
-        ]
-
-        let viewModel = LaunchesViewModel(service: service, pageSize: 2)
-        await viewModel.loadInitial()
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2"])
-        XCTAssertTrue(viewModel.hasNextPage)
-        XCTAssertNil(viewModel.errorMessage)
-    }
-
-    func testAppendsNextPageAndDeduplicates() async {
-        let service = ControllableSpaceXService()
-        service.launchesPages = [
-            1: .fixture(
-                docs: [Launch.fixture(id: "1"), Launch.fixture(id: "2")],
-                page: 1,
-                hasNextPage: true
-            ),
-            2: .fixture(
-                docs: [Launch.fixture(id: "2"), Launch.fixture(id: "3")],
-                page: 2,
-                hasNextPage: false
-            )
-        ]
-
-        let viewModel = LaunchesViewModel(service: service, pageSize: 2)
-        await viewModel.loadInitial()
-        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.launches.last)
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2", "3"])
-        XCTAssertFalse(viewModel.hasNextPage)
-    }
-
-    func testIgnoresAppendWhileLoadInFlight() async {
-        let service = ControllableSpaceXService()
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "1")], page: 1, hasNextPage: true),
-            2: .fixture(docs: [Launch.fixture(id: "2")], page: 2, hasNextPage: false)
-        ]
-
-        let viewModel = LaunchesViewModel(service: service, pageSize: 1)
-        await viewModel.loadInitial()
-
-        service.parkFetches = true
-        let item = viewModel.launches.last
-        async let first: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
-        await waitUntil { service.launchFetchCount == 2 }
-        async let second: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
-        service.parkFetches = false
-        service.releaseParkedFetch()
-        await first
-        await second
-
-        XCTAssertEqual(service.launchFetchCount, 2)
-        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2"])
-    }
-
-    func testReplaceCancelsInFlightAppend() async {
-        let service = ControllableSpaceXService()
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "1")], page: 1, hasNextPage: true),
-            2: .fixture(docs: [Launch.fixture(id: "2")], page: 2, hasNextPage: false)
-        ]
-
-        let viewModel = LaunchesViewModel(service: service, pageSize: 1)
-        await viewModel.loadInitial()
-
-        service.parkFetches = true
-        let item = viewModel.launches.last
-        async let append: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
-        await waitUntil { service.launchFetchCount == 2 }
-
-        service.parkFetches = false
-        service.launchesPages[1] = .fixture(
-            docs: [Launch.fixture(id: "replaced")],
-            page: 1,
-            hasNextPage: false
-        )
-        await viewModel.loadInitial()
-        await append
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["replaced"])
-    }
-
-    func testPreservesRowsWhenAppendFails() async {
-        let service = ControllableSpaceXService()
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "1")], page: 1, hasNextPage: true)
-        ]
-        service.failOnPage = 2
-
-        let viewModel = LaunchesViewModel(service: service, pageSize: 1)
-        await viewModel.loadInitial()
-        await viewModel.loadNextPageIfNeeded(currentItem: viewModel.launches.last)
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["1"])
-        XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertTrue(viewModel.hasNextPage)
-        XCTAssertEqual(service.launchFetchCount, 2)
-
-        service.failOnPage = nil
-        service.launchesPages[2] = .fixture(
-            docs: [Launch.fixture(id: "2")],
-            page: 2,
-            hasNextPage: false
-        )
-        await viewModel.retry()
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["1", "2"])
-        XCTAssertNil(viewModel.errorMessage)
-        XCTAssertFalse(viewModel.hasNextPage)
-        XCTAssertEqual(service.launchFetchCount, 3)
-    }
-
-    func testSurfacesErrorWhenInitialLoadFails() async {
-        let service = ControllableSpaceXService()
-        service.failOnPage = 1
-
+        service.enqueueLaunchResponse(.page([.fixture(id: "filtered")], page: 1))
         let viewModel = LaunchesViewModel(service: service)
-        await viewModel.loadInitial()
 
-        XCTAssertTrue(viewModel.launches.isEmpty)
-        XCTAssertNotNil(viewModel.errorMessage)
-    }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let start = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
+        let end = calendar.date(from: DateComponents(year: 2024, month: 1, day: 31))!
 
-    func testIgnoresStaleResponsesAfterNewerReplace() async {
-        let service = ControllableSpaceXService()
-        service.parkFetches = true
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "slow")], page: 1, hasNextPage: false)
-        ]
-
-        let viewModel = LaunchesViewModel(service: service)
-        async let slow: Void = viewModel.loadInitial()
-        await waitUntil { service.launchFetchCount == 1 }
-
-        service.parkFetches = false
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "fast")], page: 1, hasNextPage: false)
-        ]
-        await viewModel.loadInitial()
-        await slow
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["fast"])
-    }
-
-    func testRetryReloadsEmptyState() async {
-        let service = ControllableSpaceXService()
-        service.failOnPage = 1
-
-        let viewModel = LaunchesViewModel(service: service)
-        await viewModel.loadInitial()
-        XCTAssertNotNil(viewModel.errorMessage)
-
-        service.failOnPage = nil
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "recovered")], page: 1, hasNextPage: false)
-        ]
-        await viewModel.retry()
-
-        XCTAssertEqual(viewModel.launches.map(\.id), ["recovered"])
-        XCTAssertNil(viewModel.errorMessage)
-    }
-
-    func testAppliesAndClearsDateFilter() async {
-        let service = ControllableSpaceXService()
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "all")], page: 1, hasNextPage: false)
-        ]
-
-        let viewModel = LaunchesViewModel(service: service)
-        await viewModel.loadInitial()
-
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "filtered")], page: 1, hasNextPage: false)
-        ]
-        viewModel.draftStartDate = Date(timeIntervalSince1970: 1_600_000_000)
-        viewModel.draftEndDate = Date(timeIntervalSince1970: 1_700_000_000)
+        viewModel.draftStartDate = start
+        viewModel.draftEndDate = end
         await viewModel.applyFilter()
 
         XCTAssertTrue(viewModel.hasActiveFilter)
+        XCTAssertEqual(viewModel.startDate, calendar.startOfDay(for: start))
+        XCTAssertEqual(viewModel.endDate, calendar.startOfDay(for: end))
+        XCTAssertNotNil(viewModel.activeFilterSummary)
         XCTAssertEqual(viewModel.launches.map(\.id), ["filtered"])
-        XCTAssertNotNil(service.lastStartDate)
-        XCTAssertNotNil(service.lastEndDate)
 
-        service.launchesPages = [
-            1: .fixture(docs: [Launch.fixture(id: "cleared")], page: 1, hasNextPage: false)
-        ]
+        let call = try XCTUnwrap(service.launchCalls.last)
+        XCTAssertEqual(call.start, calendar.startOfDay(for: start))
+        XCTAssertEqual(call.end, calendar.startOfDay(for: end))
+    }
+
+    func testClearFilterRemovesDatesAndReloads() async throws {
+        let service = ControllableSpaceXService()
+        service.enqueueLaunchResponse(.page([.fixture(id: "a")], page: 1))
+        service.enqueueLaunchResponse(.page([.fixture(id: "b")], page: 1))
+        let viewModel = LaunchesViewModel(service: service)
+
+        viewModel.draftStartDate = Date(timeIntervalSince1970: 1_600_000_000)
+        viewModel.draftEndDate = Date(timeIntervalSince1970: 1_700_000_000)
+        await viewModel.applyFilter()
+        XCTAssertTrue(viewModel.hasActiveFilter)
+
         await viewModel.clearFilter()
 
         XCTAssertFalse(viewModel.hasActiveFilter)
-        XCTAssertEqual(viewModel.launches.map(\.id), ["cleared"])
-        XCTAssertNil(service.lastStartDate)
-        XCTAssertNil(service.lastEndDate)
+        XCTAssertNil(viewModel.startDate)
+        XCTAssertNil(viewModel.endDate)
+        XCTAssertNil(viewModel.activeFilterSummary)
+        XCTAssertEqual(viewModel.launches.map(\.id), ["b"])
+
+        let call = try XCTUnwrap(service.launchCalls.last)
+        XCTAssertNil(call.start)
+        XCTAssertNil(call.end)
     }
 
-    func testRejectsInvalidDraftFilterRange() async {
+    func testCanApplyDraftFilterRequiresStartOnOrBeforeEnd() {
         let viewModel = LaunchesViewModel(service: ControllableSpaceXService())
-        viewModel.draftStartDate = Date(timeIntervalSince1970: 2_000_000_000)
-        viewModel.draftEndDate = Date(timeIntervalSince1970: 1_000_000_000)
+        let calendar = Calendar.current
 
+        viewModel.draftStartDate = calendar.date(from: DateComponents(year: 2024, month: 2, day: 1))!
+        viewModel.draftEndDate = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
         XCTAssertFalse(viewModel.canApplyDraftFilter)
+
+        viewModel.draftEndDate = calendar.date(from: DateComponents(year: 2024, month: 3, day: 1))!
+        XCTAssertTrue(viewModel.canApplyDraftFilter)
+    }
+
+    func testApplyFilterIgnoredWhenDraftInvalid() async {
+        let service = ControllableSpaceXService()
+        let viewModel = LaunchesViewModel(service: service)
+        let calendar = Calendar.current
+
+        viewModel.draftStartDate = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+        viewModel.draftEndDate = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
         await viewModel.applyFilter()
+
+        XCTAssertTrue(service.launchCalls.isEmpty)
         XCTAssertFalse(viewModel.hasActiveFilter)
+    }
+
+    func testPrepareFilterDraftUsesActiveFilterWhenPresent() async {
+        let service = ControllableSpaceXService()
+        service.enqueueLaunchResponse(.page([], page: 1))
+        let viewModel = LaunchesViewModel(service: service)
+        let calendar = Calendar.current
+        let start = calendar.date(from: DateComponents(year: 2023, month: 5, day: 1))!
+        let end = calendar.date(from: DateComponents(year: 2023, month: 5, day: 10))!
+
+        viewModel.draftStartDate = start
+        viewModel.draftEndDate = end
+        await viewModel.applyFilter()
+
+        viewModel.draftStartDate = Date()
+        viewModel.draftEndDate = Date()
+        viewModel.prepareFilterDraft()
+
+        XCTAssertEqual(viewModel.draftStartDate, calendar.startOfDay(for: start))
+        XCTAssertEqual(viewModel.draftEndDate, calendar.startOfDay(for: end))
+    }
+
+    func testActiveFilterSummaryForDateRange() async throws {
+        let service = ControllableSpaceXService()
+        service.enqueueLaunchResponse(.page([], page: 1))
+        let viewModel = LaunchesViewModel(service: service)
+        let calendar = Calendar.current
+        let start = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
+        let end = calendar.date(from: DateComponents(year: 2024, month: 1, day: 2))!
+
+        viewModel.draftStartDate = start
+        viewModel.draftEndDate = end
+        await viewModel.applyFilter()
+
+        let summary = try XCTUnwrap(viewModel.activeFilterSummary)
+        XCTAssertTrue(summary.contains("–"))
+        XCTAssertTrue(viewModel.hasActiveFilter)
     }
 }

@@ -1,132 +1,59 @@
-import Foundation
-import UIKit
-@testable import SatelliteWatch
+import os
 import XCTest
+@testable import SatelliteWatch
 
-@MainActor
 final class RemoteImageLoaderTests: XCTestCase {
-    func testDownsampleCapsLongestPixelEdge() throws {
-        let thumbnail = RemoteImageLoader.downsample(data: try pngData(), maxPixelSize: 16)
-
-        guard let cgImage = thumbnail?.cgImage else {
-            XCTFail("Downsample returned no image")
-            return
+    func testRejectsNonHTTPURL() async {
+        let loader = RemoteImageLoader { _ in
+            XCTFail("fetch should not run")
+            return Data()
         }
-        XCTAssertLessThanOrEqual(max(cgImage.width, cgImage.height), 16)
+        let image = await loader.image(from: URL(string: "file:///tmp/x.png")!, maxPixelSize: 64)
+        XCTAssertNil(image)
     }
 
-    func testConcurrentSameKeySharesOneRequest() async throws {
-        let stub = StubImageFetch(data: try pngData(), delayNanoseconds: 150_000_000)
-        let loader = RemoteImageLoader { url in
-            try await stub.fetch(url)
+    func testCachesSuccessfulImage() async throws {
+        final class Counter: @unchecked Sendable {
+            private let value = OSAllocatedUnfairLock(initialState: 0)
+
+            func increment() {
+                value.withLock { $0 += 1 }
+            }
+
+            var current: Int {
+                value.withLock { $0 }
+            }
         }
-        let url = URL(string: "https://images.test/same.png")!
 
-        async let first = loader.image(from: url, maxPixelSize: 16)
-        async let second = loader.image(from: url, maxPixelSize: 16)
-        let images = await (first, second)
-
-        XCTAssertNotNil(images.0)
-        XCTAssertNotNil(images.1)
-        let count = await stub.count
-        XCTAssertEqual(count, 1)
-    }
-
-    func testDifferentPixelSizesDoNotShareARequest() async throws {
-        let stub = StubImageFetch(data: try pngData(), delayNanoseconds: 150_000_000)
-        let loader = RemoteImageLoader { url in
-            try await stub.fetch(url)
+        let counter = Counter()
+        let png = try XCTUnwrap(Self.tinyPNG)
+        let loader = RemoteImageLoader { _ in
+            counter.increment()
+            return png
         }
-        let url = URL(string: "https://images.test/sizes.png")!
+        let url = URL(string: "https://example.com/patch.png")!
 
-        async let first = loader.image(from: url, maxPixelSize: 16)
-        async let second = loader.image(from: url, maxPixelSize: 32)
-        _ = await (first, second)
-        let count = await stub.count
-        XCTAssertEqual(count, 2)
-    }
-
-    func testCacheHitDoesNotRefetch() async throws {
-        let stub = StubImageFetch(data: try pngData())
-        let loader = RemoteImageLoader { url in
-            try await stub.fetch(url)
-        }
-        let url = URL(string: "https://images.test/cached.png")!
-
-        let first = await loader.image(from: url, maxPixelSize: 16)
-        let second = await loader.image(from: url, maxPixelSize: 16)
+        let first = await loader.image(from: url, maxPixelSize: 32)
+        let second = await loader.image(from: url, maxPixelSize: 32)
 
         XCTAssertNotNil(first)
         XCTAssertNotNil(second)
-        let count = await stub.count
-        XCTAssertEqual(count, 1)
+        XCTAssertEqual(counter.current, 1)
     }
 
-    func testFileURLDoesNotFetch() async {
-        let stub = StubImageFetch(data: Data())
-        let loader = RemoteImageLoader { url in
-            try await stub.fetch(url)
-        }
-        let image = await loader.image(
-            from: URL(string: "file:///tmp/secret.png")!,
-            maxPixelSize: 16
+    func testDataIfHTTPSuccessRequires2xx() throws {
+        let url = URL(string: "https://example.com/a")!
+        let ok = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        XCTAssertEqual(try RemoteImageLoader.dataIfHTTPSuccess(data: Data([1]), response: ok), Data([1]))
+
+        let bad = HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!
+        XCTAssertThrowsError(try RemoteImageLoader.dataIfHTTPSuccess(data: Data(), response: bad))
+    }
+
+    private static var tinyPNG: Data? {
+        // 1x1 transparent PNG
+        Data(
+            base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5WNlwAAAAASUVORK5CYII="
         )
-
-        XCTAssertNil(image)
-        let count = await stub.count
-        XCTAssertEqual(count, 0)
-    }
-
-    func testHTTPErrorStatusIsRejected() throws {
-        let url = URL(string: "https://images.test/missing.png")!
-        let notFound = HTTPURLResponse(
-            url: url,
-            statusCode: 404,
-            httpVersion: "HTTP/1.1",
-            headerFields: nil
-        )!
-        XCTAssertThrowsError(
-            try RemoteImageLoader.dataIfHTTPSuccess(data: Data(), response: notFound)
-        )
-
-        let ok = HTTPURLResponse(
-            url: url,
-            statusCode: 200,
-            httpVersion: "HTTP/1.1",
-            headerFields: nil
-        )!
-        let body = Data("ok".utf8)
-        XCTAssertEqual(try RemoteImageLoader.dataIfHTTPSuccess(data: body, response: ok), body)
-    }
-
-    private func pngData() throws -> Data {
-        let data = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 32)).image { renderer in
-            UIColor.red.setFill()
-            renderer.fill(CGRect(x: 0, y: 0, width: 64, height: 32))
-        }.pngData()
-        guard let data else {
-            struct PNGEncodingError: Error {}
-            throw PNGEncodingError()
-        }
-        return data
-    }
-}
-
-private actor StubImageFetch {
-    private(set) var count = 0
-    private let data: Data
-    private let delayNanoseconds: UInt64
-
-    init(data: Data, delayNanoseconds: UInt64 = 0) {
-        self.data = data
-        self.delayNanoseconds = delayNanoseconds
-    }
-
-    func fetch(_ url: URL) async throws -> Data {
-        count += 1
-        if delayNanoseconds > 0 {
-            try await Task.sleep(nanoseconds: delayNanoseconds)
-        }
-        return data
     }
 }

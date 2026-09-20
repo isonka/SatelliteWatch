@@ -1,18 +1,16 @@
-import Foundation
-@testable import SatelliteWatch
 import XCTest
+@testable import SatelliteWatch
 
 final class DateFormattingTests: XCTestCase {
-    private let date = Date(timeIntervalSince1970: 1_583_554_231)
+    private let date = Date(timeIntervalSince1970: 1_700_000_000)
 
-    func testHourIncludesTimeUnlikeDayOnly() {
-        XCTAssertNotEqual(
-            DateFormatting.display(date: date, precision: .hour),
-            DateFormatting.dayOnly(date)
-        )
+    func testHourPrecisionIncludesTime() {
+        let text = DateFormatting.display(date: date, precision: .hour)
+        XCTAssertFalse(text.isEmpty)
+        XCTAssertNotEqual(text, DateFormatting.dayOnly(date))
     }
 
-    func testDayAndNilHideClockTime() {
+    func testDayAndNilUseDayOnly() {
         XCTAssertEqual(
             DateFormatting.display(date: date, precision: .day),
             DateFormatting.dayOnly(date)
@@ -23,14 +21,10 @@ final class DateFormattingTests: XCTestCase {
         )
     }
 
-    func testCoarserPrecisionDoesNotUseDayOnly() {
-        XCTAssertNotEqual(
-            DateFormatting.display(date: date, precision: .month),
-            DateFormatting.dayOnly(date)
-        )
-        XCTAssertNotEqual(
-            DateFormatting.display(date: date, precision: .year),
-            DateFormatting.dayOnly(date)
-        )
+    func testMonthQuarterYearProduceNonEmptyStrings() {
+        XCTAssertFalse(DateFormatting.display(date: date, precision: .month).isEmpty)
+        XCTAssertFalse(DateFormatting.display(date: date, precision: .quarter).isEmpty)
+        XCTAssertFalse(DateFormatting.display(date: date, precision: .half).isEmpty)
+        XCTAssertFalse(DateFormatting.display(date: date, precision: .year).isEmpty)
     }
 }

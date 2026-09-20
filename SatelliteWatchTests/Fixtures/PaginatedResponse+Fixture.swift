@@ -2,22 +2,26 @@ import Foundation
 @testable import SatelliteWatch
 
 extension PaginatedResponse {
-    static func fixture(
-        docs: [Document],
+    static func page(
+        _ docs: [Document],
         page: Int = 1,
+        limit: Int = 20,
         hasNextPage: Bool = false,
-        limit: Int = 20
+        hasPrevPage: Bool = false,
+        totalPages: Int? = nil,
+        totalDocs: Int? = nil
     ) -> PaginatedResponse<Document> {
-        PaginatedResponse(
+        let resolvedTotalPages = totalPages ?? (hasNextPage ? page + 1 : max(page, 1))
+        return PaginatedResponse(
             docs: docs,
-            totalDocs: docs.count,
+            totalDocs: totalDocs ?? docs.count,
             limit: limit,
-            totalPages: hasNextPage ? page + 1 : page,
+            totalPages: resolvedTotalPages,
             page: page,
             hasNextPage: hasNextPage,
-            hasPrevPage: page > 1,
+            hasPrevPage: hasPrevPage,
             nextPage: hasNextPage ? page + 1 : nil,
-            prevPage: page > 1 ? page - 1 : nil
+            prevPage: hasPrevPage ? page - 1 : nil
         )
     }
 }

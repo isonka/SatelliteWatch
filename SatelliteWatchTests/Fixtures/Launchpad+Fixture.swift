@@ -3,9 +3,9 @@ import Foundation
 
 extension LaunchpadSummary {
     static func fixture(
-        id: String = "ccafs_slc_40",
-        name: String? = "CCAFS SLC 40",
-        fullName: String? = "Cape Canaveral Air Force Station Space Launch Complex 40",
+        id: String = "ksc",
+        name: String? = "KSC LC 39A",
+        fullName: String? = "Kennedy Space Center Historic Launch Complex 39A",
         locality: String? = "Cape Canaveral",
         region: String? = "Florida"
     ) -> LaunchpadSummary {

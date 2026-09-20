@@ -70,6 +70,28 @@ final class SatelliteWatchUITests: XCTestCase {
         XCTAssertTrue(element(app, id: "rocket-launch-row-launch-2").waitForExistence(timeout: 8))
     }
 
+    func testLaunchDetailShowsWebcastLink() {
+        let app = launchApp()
+        XCTAssertTrue(element(app, id: "launch-row-launch-1").waitForExistence(timeout: 8))
+        element(app, id: "launch-row-launch-1").tap()
+
+        XCTAssertTrue(element(app, id: "launch-detail-launch-1").waitForExistence(timeout: 8))
+        XCTAssertTrue(element(app, id: "watch-launch-link").waitForExistence(timeout: 8))
+    }
+
+    func testSwitchingTabsPreservesLaunchList() {
+        let app = launchApp()
+        XCTAssertTrue(element(app, id: "launch-row-launch-1").waitForExistence(timeout: 8))
+
+        let rocketsTab = app.tabBars.buttons["Rockets"]
+        XCTAssertTrue(rocketsTab.waitForExistence(timeout: 5))
+        rocketsTab.tap()
+        XCTAssertTrue(element(app, id: "rocket-row-falcon9").waitForExistence(timeout: 8))
+
+        app.tabBars.buttons["Launches"].tap()
+        XCTAssertTrue(element(app, id: "launch-row-launch-1").waitForExistence(timeout: 8))
+    }
+
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-sampleData"]

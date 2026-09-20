@@ -4,13 +4,21 @@ import Foundation
 extension Launch {
     static func fixture(
         id: String = "launch-1",
-        name: String = "CRS-20",
-        details: String? = "Resupply mission",
+        name: String = "Starlink 6-1",
+        details: String? = "A batch of Starlink satellites.",
         success: Bool? = true,
         upcoming: Bool = false,
-        dateUTC: Date = Date(timeIntervalSince1970: 1_583_556_631),
+        dateUTC: Date = Date(timeIntervalSince1970: 1_700_000_000),
         datePrecision: DatePrecision? = .hour,
-        links: LaunchLinks? = .fixture(),
+        links: LaunchLinks? = LaunchLinks(
+            patch: .init(
+                small: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png",
+                large: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png"
+            ),
+            webcast: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            wikipedia: nil,
+            article: nil
+        ),
         rocket: RocketRef? = .populated(.fixture()),
         launchpad: LaunchpadRef? = .populated(.fixture())
     ) -> Launch {
@@ -25,23 +33,6 @@ extension Launch {
             links: links,
             rocket: rocket,
             launchpad: launchpad
-        )
-    }
-}
-
-extension LaunchLinks {
-    static func fixture(
-        smallPatch: String? = "https://example.com/small.png",
-        largePatch: String? = "https://example.com/large.png",
-        webcast: String? = "https://www.youtube.com/watch?v=abc",
-        wikipedia: String? = nil,
-        article: String? = nil
-    ) -> LaunchLinks {
-        LaunchLinks(
-            patch: .init(small: smallPatch, large: largePatch),
-            webcast: webcast,
-            wikipedia: wikipedia,
-            article: article
         )
     }
 }
