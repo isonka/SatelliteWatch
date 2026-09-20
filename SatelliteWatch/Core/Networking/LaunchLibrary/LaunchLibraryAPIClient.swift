@@ -201,11 +201,24 @@ private actor LaunchLibrarySnapshot {
         launchesInFlight = task
         defer { launchesInFlight = nil }
 
-        let items = try await task.value
-        let entry = Entry(items: items, fetchedAt: now())
-        launches = entry
-        writeDisk(entry, fileName: "launches.json")
-        return items
+        do {
+            let items = try await task.value
+            let entry = Entry(items: items, fetchedAt: now())
+            launches = entry
+            writeDisk(entry, fileName: "launches.json")
+            return items
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            if let launches {
+                return launches.items
+            }
+            if let disk: Entry<Launch> = readDisk(fileName: "launches.json") {
+                launches = disk
+                return disk.items
+            }
+            throw error
+        }
     }
 
     func rockets(load: @escaping @Sendable () async throws -> [Rocket]) async throws -> [Rocket] {
@@ -226,11 +239,24 @@ private actor LaunchLibrarySnapshot {
         rocketsInFlight = task
         defer { rocketsInFlight = nil }
 
-        let items = try await task.value
-        let entry = Entry(items: items, fetchedAt: now())
-        rockets = entry
-        writeDisk(entry, fileName: "rockets.json")
-        return items
+        do {
+            let items = try await task.value
+            let entry = Entry(items: items, fetchedAt: now())
+            rockets = entry
+            writeDisk(entry, fileName: "rockets.json")
+            return items
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            if let rockets {
+                return rockets.items
+            }
+            if let disk: Entry<Rocket> = readDisk(fileName: "rockets.json") {
+                rockets = disk
+                return disk.items
+            }
+            throw error
+        }
     }
 
     private func isFresh(_ fetchedAt: Date) -> Bool {

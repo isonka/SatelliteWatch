@@ -71,7 +71,7 @@ Each snapshot reload costs **3 GETs**, in parallel where possible, then pages in
 | Previous | `GET /2.2.0/launch/previous/?lsp__id=121&limit=100` |
 | Rockets | `GET /2.2.0/config/launcher/?manufacturer__name=SpaceX&limit=20&mode=detailed` |
 
-DTOs map into the same `Launch` / `Rocket` types. Snapshot lives in memory and on disk (1-hour TTL). Scroll and date filter after a load are free. Pull-to-refresh inside the TTL returns the cached snapshot.
+DTOs map into the same `Launch` / `Rocket` types. Snapshot lives in memory and on disk (1-hour TTL). Scroll and date filter after a load are free. Pull-to-refresh inside the TTL returns the cached snapshot. After the TTL, a failed network reload still shows the last disk snapshot instead of an empty error. Lists load from `.task`, not `.onAppear`.
 
 SpaceX launcher configs are ~13 rows, still one client page at `limit=20`. Use the **launches** list to demo infinite scroll on this source. Rocket paging stays a unit-test story.
 

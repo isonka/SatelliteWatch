@@ -70,9 +70,6 @@ struct LaunchesListView: View {
         .task(id: ObjectIdentifier(viewModel)) {
             await loadIfNeeded()
         }
-        .onAppear {
-            Task { await loadIfNeeded() }
-        }
     }
 
     private var listContent: some View {
