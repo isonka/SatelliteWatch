@@ -1,37 +1,47 @@
 import SwiftUI
+import UIKit
 
 struct RemoteImageView: View {
     let url: URL?
     var height: CGFloat = 200
 
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+    @State private var didFail = false
+
     var body: some View {
         Group {
-            if let url {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        ZStack {
-                            AppColor.secondaryText.opacity(0.08)
-                            ProgressView()
-                        }
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        placeholder
-                    @unknown default:
-                        placeholder
-                    }
-                }
-            } else {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else if url == nil || didFail {
                 placeholder
+            } else {
+                ZStack {
+                    AppColor.secondaryText.opacity(0.08)
+                    ProgressView()
+                }
             }
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipped()
         .accessibilityHidden(url == nil)
+        .task(id: url) {
+            image = nil
+            didFail = false
+            guard let url else { return }
+            let maxPixelSize = max(1, height * displayScale)
+            if let loaded = await RemoteImageLoader.shared.image(
+                from: url,
+                maxPixelSize: maxPixelSize
+            ) {
+                image = loaded
+            } else if !Task.isCancelled {
+                didFail = true
+            }
+        }
     }
 
     private var placeholder: some View {

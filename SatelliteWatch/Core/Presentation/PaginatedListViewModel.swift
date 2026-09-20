@@ -45,14 +45,23 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
         }
     }
 
-    func loadNextPageIfNeeded(currentItem: Item?) async {
-        guard let currentItem else { return }
-        guard let index = items.firstIndex(where: { $0.id == currentItem.id }) else { return }
-        let thresholdIndex = max(items.count - 5, 0)
-        guard index >= thresholdIndex else { return }
-        guard hasNextPage else { return }
-        guard !isInitialLoading, !isRefreshing else { return }
+    func cancelLoads() {
+        loadTask?.cancel()
+    }
 
+    func shouldLoadNextPage(currentItem: Item?) -> Bool {
+        guard let currentItem else { return false }
+        guard let index = items.firstIndex(where: { $0.id == currentItem.id }) else { return false }
+        let thresholdIndex = max(items.count - 5, 0)
+        guard index >= thresholdIndex else { return false }
+        guard hasNextPage else { return false }
+        guard !isInitialLoading, !isRefreshing else { return false }
+        guard loadTask == nil else { return false }
+        return true
+    }
+
+    func loadNextPageIfNeeded(currentItem: Item?) async {
+        guard shouldLoadNextPage(currentItem: currentItem) else { return }
         await load(page: currentPage + 1, mode: .append)
     }
 
@@ -85,10 +94,15 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
             isLoadingMore = true
         }
 
-        loadTask = Task {
+        let task = Task {
             await performFetch(page: page, mode: mode, generation: generation)
         }
-        await loadTask?.value
+        loadTask = task
+        await withTaskCancellationHandler {
+            _ = await task.result
+        } onCancel: {
+            task.cancel()
+        }
 
         if generation == requestGeneration {
             loadTask = nil
@@ -121,6 +135,8 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
             hasNextPage = response.hasNextPage
             errorMessage = nil
         } catch is CancellationError {
+            return
+        } catch let error as URLError where error.code == .cancelled {
             return
         } catch {
             guard !Task.isCancelled, generation == requestGeneration else { return }

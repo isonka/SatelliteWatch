@@ -45,6 +45,9 @@ struct RocketsListView: View {
             guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
             await viewModel.loadInitial()
         }
+        .onDisappear {
+            viewModel.cancelLoads()
+        }
     }
 
     private var listContent: some View {
@@ -54,7 +57,9 @@ struct RocketsListView: View {
                     RocketRowView(rocket: rocket)
                 }
                 .onAppear {
-                    guard enablesPagination else { return }
+                    guard enablesPagination,
+                          viewModel.shouldLoadNextPage(currentItem: rocket)
+                    else { return }
                     Task {
                         await viewModel.loadNextPageIfNeeded(currentItem: rocket)
                     }

@@ -78,6 +78,9 @@ struct LaunchesListView: View {
             guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
             await viewModel.loadInitial()
         }
+        .onDisappear {
+            viewModel.cancelLoads()
+        }
     }
 
     private var listContent: some View {
@@ -87,7 +90,9 @@ struct LaunchesListView: View {
                     LaunchRowView(launch: launch)
                 }
                 .onAppear {
-                    guard enablesPagination else { return }
+                    guard enablesPagination,
+                          viewModel.shouldLoadNextPage(currentItem: launch)
+                    else { return }
                     Task {
                         await viewModel.loadNextPageIfNeeded(currentItem: launch)
                     }
