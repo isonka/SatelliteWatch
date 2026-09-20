@@ -165,6 +165,124 @@ enum SpaceXJSONFixtures {
 }
 
 enum LaunchLibraryJSONFixtures {
+    static let launchesPage1 = """
+    {
+      "count": 2,
+      "next": "https://ll.thespacedevs.com/2.2.0/launch/?limit=1&offset=1&lsp__id=121&ordering=-net",
+      "previous": null,
+      "results": [
+        {
+          "id": "upcoming-1",
+          "name": "Crew-11",
+          "net": "2025-06-01T12:00:00Z",
+          "image": "https://example.com/crew.png",
+          "status": { "id": 1, "abbrev": "TBD" },
+          "net_precision": { "abbrev": "HOUR" },
+          "rocket": {
+            "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
+          },
+          "mission": {
+            "description": "Crew rotation",
+            "info_urls": ["https://example.com/info"],
+            "vid_urls": [{ "url": "https://example.com/vid" }]
+          },
+          "pad": {
+            "id": 87,
+            "name": "LC-39A",
+            "wiki_url": "https://en.wikipedia.org/wiki/Kennedy_Space_Center_Launch_Complex_39",
+            "location": { "name": "Cape Canaveral", "country_code": "USA" }
+          },
+          "program": []
+        }
+      ]
+    }
+    """
+
+    static let launchesPage2 = """
+    {
+      "count": 2,
+      "next": null,
+      "previous": "https://ll.thespacedevs.com/2.2.0/launch/?limit=1&offset=0&lsp__id=121&ordering=-net",
+      "results": [
+        {
+          "id": "previous-1",
+          "name": "Starlink Group 6-1",
+          "net": "2024-01-15T10:00:00Z",
+          "image": null,
+          "status": { "id": 3, "abbrev": "Success" },
+          "net_precision": { "abbrev": "DAY" },
+          "rocket": {
+            "configuration": { "id": 164, "name": "Falcon 9", "full_name": "Falcon 9 Block 5" }
+          },
+          "mission": {
+            "description": "Starlink mission",
+            "info_urls": null,
+            "vid_urls": null
+          },
+          "pad": {
+            "id": 80,
+            "name": "SLC-40",
+            "wiki_url": null,
+            "location": { "name": "Cape Canaveral", "country_code": "USA" }
+          },
+          "program": [
+            {
+              "mission_patches": [
+                { "priority": 10, "image_url": "https://example.com/patch.png" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+    """
+
+    static let rocketsPage = """
+    {
+      "count": 40,
+      "next": "https://ll.thespacedevs.com/2.2.0/config/launcher/?limit=20&offset=20&manufacturer__name=SpaceX&mode=detailed",
+      "previous": null,
+      "results": [
+        {
+          "id": 164,
+          "name": "Falcon 9",
+          "full_name": "Falcon 9 Block 5",
+          "family": "Falcon",
+          "description": "Reusable medium-lift rocket.",
+          "active": true,
+          "image_url": "https://example.com/f9.jpg",
+          "total_launch_count": 100,
+          "successful_launches": 98
+        },
+        {
+          "id": 188,
+          "name": "Falcon Heavy",
+          "full_name": "Falcon Heavy",
+          "family": "Falcon",
+          "description": null,
+          "active": true,
+          "image_url": null,
+          "total_launch_count": 10,
+          "successful_launches": 10
+        }
+      ]
+    }
+    """
+
+    static let rocketFalconHeavy = """
+    {
+      "id": 188,
+      "name": "Falcon Heavy",
+      "full_name": "Falcon Heavy",
+      "family": "Falcon",
+      "description": null,
+      "active": true,
+      "image_url": null,
+      "total_launch_count": 10,
+      "successful_launches": 10
+    }
+    """
+
     static let upcomingLaunches = """
     {
       "results": [

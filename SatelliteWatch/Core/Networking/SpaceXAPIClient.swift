@@ -1,14 +1,14 @@
 import Foundation
 
 struct SpaceXAPIClient: SpaceXServiceProtocol {
-    private let transport: @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    private let http: HTTPClient
 
-    init(
-        transport: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = {
-            try await URLSession.shared.data(for: $0)
-        }
-    ) {
-        self.transport = transport
+    init(http: HTTPClient = HTTPClient()) {
+        self.http = http
+    }
+
+    init(transport: @escaping HTTPClient.Transport) {
+        self.http = HTTPClient(transport: transport)
     }
 
     func fetchLaunches(
@@ -41,7 +41,7 @@ struct SpaceXAPIClient: SpaceXServiceProtocol {
             )
         )
 
-        return try await post(endpoint: .launchesQuery, body: body)
+        return try await http.post(url: SpaceXEndpoint.launchesQuery.url, body: body)
     }
 
     func fetchRockets(page: Int, limit: Int) async throws -> PaginatedResponse<Rocket> {
@@ -54,58 +54,10 @@ struct SpaceXAPIClient: SpaceXServiceProtocol {
                 populate: nil
             )
         )
-        return try await post(endpoint: .rocketsQuery, body: body)
+        return try await http.post(url: SpaceXEndpoint.rocketsQuery.url, body: body)
     }
 
     func fetchRocket(id: String) async throws -> Rocket {
-        try await get(endpoint: .rocket(id: id))
-    }
-
-    private func post<Body: Encodable, Response: Decodable>(
-        endpoint: SpaceXEndpoint,
-        body: Body
-    ) async throws -> Response {
-        var request = URLRequest(url: endpoint.url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try SpaceXJSONEncoderFactory.make().encode(body)
-        return try await perform(request)
-    }
-
-    private func get<Response: Decodable>(endpoint: SpaceXEndpoint) async throws -> Response {
-        var request = URLRequest(url: endpoint.url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        return try await perform(request)
-    }
-
-    private func perform<Response: Decodable>(_ request: URLRequest) async throws -> Response {
-        let data: Data
-        let response: URLResponse
-
-        do {
-            (data, response) = try await transport(request)
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch let error as URLError where error.code == .cancelled {
-            throw CancellationError()
-        } catch {
-            throw SpaceXAPIError.transport(error.localizedDescription)
-        }
-
-        guard let http = response as? HTTPURLResponse else {
-            throw SpaceXAPIError.invalidResponse
-        }
-
-        guard (200...299).contains(http.statusCode) else {
-            throw SpaceXAPIError.httpStatus(http.statusCode)
-        }
-
-        do {
-            return try SpaceXJSONDecoderFactory.make().decode(Response.self, from: data)
-        } catch {
-            throw SpaceXAPIError.decoding(error.localizedDescription)
-        }
+        try await http.get(url: SpaceXEndpoint.rocket(id: id).url)
     }
 }

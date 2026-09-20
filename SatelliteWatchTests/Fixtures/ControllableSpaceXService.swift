@@ -2,16 +2,18 @@ import Foundation
 import os
 @testable import SatelliteWatch
 
-/// Test double with scripted responses, call counting, and optional delays.
 final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendable {
-    private struct State {
-        var launchResponses: [Result<PaginatedResponse<Launch>, Error>] = []
-        var rocketPageResponses: [Result<PaginatedResponse<Rocket>, Error>] = []
+    private struct Scripted<Value>: @unchecked Sendable {
+        let result: Result<Value, Error>
+        let gate: TestGate?
+    }
+
+    private struct State: @unchecked Sendable {
+        var launchResponses: [Scripted<PaginatedResponse<Launch>>] = []
+        var rocketPageResponses: [Scripted<PaginatedResponse<Rocket>>] = []
         var rocketByID: [String: Result<Rocket, Error>] = [:]
         var defaultRocket: Result<Rocket, Error> = .success(.fixture())
-        var launchesDelayNanoseconds: UInt64 = 0
-        var rocketsDelayNanoseconds: UInt64 = 0
-        var rocketDelayNanoseconds: UInt64 = 0
+        var rocketGate: TestGate?
         var launchCalls: [(page: Int, limit: Int, start: Date?, end: Date?)] = []
         var rocketPageCalls: [(page: Int, limit: Int)] = []
         var rocketIDCalls: [String] = []
@@ -31,20 +33,20 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
         state.withLock { $0.rocketIDCalls }
     }
 
-    func enqueueLaunchResponse(_ response: PaginatedResponse<Launch>) {
-        state.withLock { $0.launchResponses.append(.success(response)) }
+    func enqueueLaunchResponse(_ response: PaginatedResponse<Launch>, gatedBy gate: TestGate? = nil) {
+        state.withLock { $0.launchResponses.append(Scripted(result: .success(response), gate: gate)) }
     }
 
-    func enqueueLaunchError(_ error: Error) {
-        state.withLock { $0.launchResponses.append(.failure(error)) }
+    func enqueueLaunchError(_ error: Error, gatedBy gate: TestGate? = nil) {
+        state.withLock { $0.launchResponses.append(Scripted(result: .failure(error), gate: gate)) }
     }
 
-    func enqueueRocketPage(_ response: PaginatedResponse<Rocket>) {
-        state.withLock { $0.rocketPageResponses.append(.success(response)) }
+    func enqueueRocketPage(_ response: PaginatedResponse<Rocket>, gatedBy gate: TestGate? = nil) {
+        state.withLock { $0.rocketPageResponses.append(Scripted(result: .success(response), gate: gate)) }
     }
 
-    func enqueueRocketPageError(_ error: Error) {
-        state.withLock { $0.rocketPageResponses.append(.failure(error)) }
+    func enqueueRocketPageError(_ error: Error, gatedBy gate: TestGate? = nil) {
+        state.withLock { $0.rocketPageResponses.append(Scripted(result: .failure(error), gate: gate)) }
     }
 
     func setRocket(id: String, result: Result<Rocket, Error>) {
@@ -55,16 +57,8 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
         state.withLock { $0.defaultRocket = result }
     }
 
-    func setLaunchesDelay(nanoseconds: UInt64) {
-        state.withLock { $0.launchesDelayNanoseconds = nanoseconds }
-    }
-
-    func setRocketsDelay(nanoseconds: UInt64) {
-        state.withLock { $0.rocketsDelayNanoseconds = nanoseconds }
-    }
-
-    func setRocketDelay(nanoseconds: UInt64) {
-        state.withLock { $0.rocketDelayNanoseconds = nanoseconds }
+    func setRocketGate(_ gate: TestGate?) {
+        state.withLock { $0.rocketGate = gate }
     }
 
     func fetchLaunches(
@@ -73,52 +67,38 @@ final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendabl
         startDate: Date?,
         endDate: Date?
     ) async throws -> PaginatedResponse<Launch> {
-        let (delay, result) = state.withLock { state -> (UInt64, Result<PaginatedResponse<Launch>, Error>) in
+        let scripted = state.withLock { state -> Scripted<PaginatedResponse<Launch>> in
             state.launchCalls.append((page, limit, startDate, endDate))
-            let delay = state.launchesDelayNanoseconds
-            let result: Result<PaginatedResponse<Launch>, Error>
-            if state.launchResponses.isEmpty {
-                result = .success(.page([], page: page, limit: limit))
-            } else {
-                result = state.launchResponses.removeFirst()
+            guard !state.launchResponses.isEmpty else {
+                return Scripted(result: .success(.page([], page: page, limit: limit)), gate: nil)
             }
-            return (delay, result)
+            return state.launchResponses.removeFirst()
         }
 
-        if delay > 0 {
-            try await Task.sleep(nanoseconds: delay)
-        }
-        return try result.get()
+        await scripted.gate?.enterAndWait()
+        return try scripted.result.get()
     }
 
     func fetchRockets(page: Int, limit: Int) async throws -> PaginatedResponse<Rocket> {
-        let (delay, result) = state.withLock { state -> (UInt64, Result<PaginatedResponse<Rocket>, Error>) in
+        let scripted = state.withLock { state -> Scripted<PaginatedResponse<Rocket>> in
             state.rocketPageCalls.append((page, limit))
-            let delay = state.rocketsDelayNanoseconds
-            let result: Result<PaginatedResponse<Rocket>, Error>
-            if state.rocketPageResponses.isEmpty {
-                result = .success(.page([], page: page, limit: limit))
-            } else {
-                result = state.rocketPageResponses.removeFirst()
+            guard !state.rocketPageResponses.isEmpty else {
+                return Scripted(result: .success(.page([], page: page, limit: limit)), gate: nil)
             }
-            return (delay, result)
+            return state.rocketPageResponses.removeFirst()
         }
 
-        if delay > 0 {
-            try await Task.sleep(nanoseconds: delay)
-        }
-        return try result.get()
+        await scripted.gate?.enterAndWait()
+        return try scripted.result.get()
     }
 
     func fetchRocket(id: String) async throws -> Rocket {
-        let (delay, result) = state.withLock { state -> (UInt64, Result<Rocket, Error>) in
+        let (gate, result) = state.withLock { state -> (TestGate?, Result<Rocket, Error>) in
             state.rocketIDCalls.append(id)
-            return (state.rocketDelayNanoseconds, state.rocketByID[id] ?? state.defaultRocket)
+            return (state.rocketGate, state.rocketByID[id] ?? state.defaultRocket)
         }
 
-        if delay > 0 {
-            try await Task.sleep(nanoseconds: delay)
-        }
+        await gate?.enterAndWait()
         return try result.get()
     }
 }

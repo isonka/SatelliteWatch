@@ -15,10 +15,10 @@ final class AppDependencies {
 
     init(dataSourceMode: DataSourceMode? = nil) {
         #if DEBUG
-        // SpaceX origin returns 525 while archived; Debug defaults to Launch Library.
+        let fallback: DataSourceMode = Self.isRunningUnitTests ? .sample : .mirror
         let mode = dataSourceMode ?? DataSourceMode.resolve(
             from: ProcessInfo.processInfo.arguments,
-            fallback: .mirror
+            fallback: fallback
         )
         #else
         let mode = dataSourceMode ?? .live
@@ -30,6 +30,11 @@ final class AppDependencies {
     static var preview: AppDependencies {
         AppDependencies(dataSourceMode: .sample)
     }
+
+    #if DEBUG
+    static let isRunningUnitTests =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    #endif
 
     private static func makeService(for mode: DataSourceMode) -> any SpaceXServiceProtocol {
         switch mode {

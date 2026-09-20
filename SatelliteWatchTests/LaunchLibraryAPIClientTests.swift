@@ -2,69 +2,114 @@ import XCTest
 @testable import SatelliteWatch
 
 final class LaunchLibraryAPIClientTests: XCTestCase {
-    func testFetchLaunchesMergesDedupesAndSortsDescending() async throws {
+    func testFetchLaunchesPage1SendsLimitOffsetAndOrdering() async throws {
+        let captured = RequestCapture()
         let client = LaunchLibraryAPIClient { request in
-            let path = request.url!.path
-            if path.contains("/launch/upcoming") {
-                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.upcomingLaunches)
-            }
-            if path.contains("/launch/previous") {
-                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.previousLaunches)
-            }
-            return StubHTTP.response(statusCode: 404, url: request.url!)
+            captured.store(request)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.launchesPage1)
         }
 
-        let page = try await client.fetchLaunches(page: 1, limit: 20, startDate: nil, endDate: nil)
-        // previous-1 and upcoming-1 (previous wins on duplicate id)
-        XCTAssertEqual(page.docs.map(\.id), ["upcoming-1", "previous-1"])
-        XCTAssertEqual(page.docs.first?.name, "Crew-11 (overlap stale)")
-        XCTAssertEqual(page.docs.first?.success, true)
-        XCTAssertFalse(page.docs.first?.upcoming ?? true)
+        let page = try await client.fetchLaunches(page: 1, limit: 1, startDate: nil, endDate: nil)
+
+        XCTAssertEqual(page.docs.map(\.id), ["upcoming-1"])
+        XCTAssertTrue(page.docs[0].upcoming)
+        XCTAssertNil(page.docs[0].success)
+        XCTAssertTrue(page.hasNextPage)
         XCTAssertEqual(page.totalDocs, 2)
+        XCTAssertEqual(page.page, 1)
+        XCTAssertEqual(page.nextPage, 2)
+
+        let request = try XCTUnwrap(captured.value)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.path, "/2.2.0/launch")
+        XCTAssertEqual(request.queryValue("lsp__id"), "121")
+        XCTAssertEqual(request.queryValue("limit"), "1")
+        XCTAssertEqual(request.queryValue("offset"), "0")
+        XCTAssertEqual(request.queryValue("ordering"), "-net")
+        XCTAssertNil(request.queryValue("net__gte"))
+        XCTAssertNil(request.queryValue("net__lte"))
     }
 
-    func testFetchLaunchesPaginatesInMemory() async throws {
-        let client = makeLaunchClient()
+    func testFetchLaunchesPage2UsesOffsetAndNextIsNil() async throws {
+        let captured = RequestCapture()
+        let client = LaunchLibraryAPIClient { request in
+            captured.store(request)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.launchesPage2)
+        }
 
-        let page1 = try await client.fetchLaunches(page: 1, limit: 1, startDate: nil, endDate: nil)
-        XCTAssertEqual(page1.docs.count, 1)
-        XCTAssertTrue(page1.hasNextPage)
-        XCTAssertEqual(page1.totalDocs, 2)
+        let page = try await client.fetchLaunches(page: 2, limit: 1, startDate: nil, endDate: nil)
 
-        let page2 = try await client.fetchLaunches(page: 2, limit: 1, startDate: nil, endDate: nil)
-        XCTAssertEqual(page2.docs.count, 1)
-        XCTAssertFalse(page2.hasNextPage)
-        XCTAssertTrue(page2.hasPrevPage)
+        XCTAssertEqual(page.docs.map(\.id), ["previous-1"])
+        XCTAssertFalse(page.docs[0].upcoming)
+        XCTAssertEqual(page.docs[0].success, true)
+        XCTAssertFalse(page.hasNextPage)
+        XCTAssertEqual(page.page, 2)
+        XCTAssertNil(page.nextPage)
+
+        let request = try XCTUnwrap(captured.value)
+        XCTAssertEqual(request.queryValue("limit"), "1")
+        XCTAssertEqual(request.queryValue("offset"), "1")
     }
 
-    func testFetchLaunchesAppliesLocalDateFilter() async throws {
-        let client = makeLaunchClient()
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    func testFetchLaunchesSendsDateBoundsAsQuery() async throws {
+        let captured = RequestCapture()
+        let client = LaunchLibraryAPIClient { request in
+            captured.store(request)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.launchesPage2)
+        }
+
+        let calendar = Calendar.current
         let start = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
         let end = calendar.date(from: DateComponents(year: 2024, month: 12, day: 31))!
+        let bounds = LaunchDateRangeEncoder.queryBounds(start: start, end: end)
 
-        let page = try await client.fetchLaunches(page: 1, limit: 20, startDate: start, endDate: end)
-        XCTAssertEqual(page.docs.map(\.id), ["previous-1"])
+        _ = try await client.fetchLaunches(page: 1, limit: 20, startDate: start, endDate: end)
+
+        let request = try XCTUnwrap(captured.value)
+        XCTAssertEqual(request.queryValue("net__gte"), bounds.startUTC)
+        XCTAssertEqual(request.queryValue("net__lte"), bounds.endUTC)
     }
 
-    func testFetchRocketsAndFetchByID() async throws {
+    func testFetchRocketsSendsOffsetAndHasNextFromNextURL() async throws {
+        let captured = RequestCapture()
         let client = LaunchLibraryAPIClient { request in
-            XCTAssertTrue(request.url!.path.contains("/config/launcher"))
-            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rockets)
+            captured.store(request)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rocketsPage)
         }
 
-        let page = try await client.fetchRockets(page: 1, limit: 20)
+        let page = try await client.fetchRockets(page: 2, limit: 20)
         XCTAssertEqual(page.docs.map(\.id), ["164", "188"])
-        XCTAssertEqual(page.docs.first?.name, "Falcon 9 Block 5")
+        XCTAssertTrue(page.hasNextPage)
+        XCTAssertEqual(page.totalDocs, 40)
+        XCTAssertEqual(page.page, 2)
+
+        let request = try XCTUnwrap(captured.value)
+        XCTAssertEqual(request.url?.path, "/2.2.0/config/launcher")
+        XCTAssertEqual(request.queryValue("manufacturer__name"), "SpaceX")
+        XCTAssertEqual(request.queryValue("limit"), "20")
+        XCTAssertEqual(request.queryValue("offset"), "20")
+        XCTAssertEqual(request.queryValue("mode"), "detailed")
+    }
+
+    func testFetchRocketUsesDetailPath() async throws {
+        let captured = RequestCapture()
+        let client = LaunchLibraryAPIClient { request in
+            captured.store(request)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rocketFalconHeavy)
+        }
 
         let rocket = try await client.fetchRocket(id: "188")
         XCTAssertEqual(rocket.name, "Falcon Heavy")
+
+        let request = try XCTUnwrap(captured.value)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.path, "/2.2.0/config/launcher/188")
+        XCTAssertNil(request.url?.query)
     }
 
     func testFetchRocketMissingIDReturns404() async {
         let client = LaunchLibraryAPIClient { request in
-            StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rockets)
+            StubHTTP.response(statusCode: 404, url: request.url!)
         }
 
         do {
@@ -96,26 +141,20 @@ final class LaunchLibraryAPIClientTests: XCTestCase {
         let captured = RequestCapture()
         let client = LaunchLibraryAPIClient { request in
             captured.store(request)
-            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rockets)
+            return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.rocketsPage)
         }
 
         _ = try await client.fetchRockets(page: 1, limit: 20)
         XCTAssertEqual(
             captured.value?.value(forHTTPHeaderField: "User-Agent"),
-            "SatelliteWatch/1.0 (iOS)"
+            HTTPClient.defaultUserAgent
         )
     }
 
-    private func makeLaunchClient() -> LaunchLibraryAPIClient {
-        LaunchLibraryAPIClient { request in
-            let path = request.url!.path
-            if path.contains("/launch/upcoming") {
-                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.upcomingLaunches)
-            }
-            if path.contains("/launch/previous") {
-                return StubHTTP.jsonResponse(url: request.url!, json: LaunchLibraryJSONFixtures.previousLaunches)
-            }
-            return StubHTTP.response(statusCode: 404, url: request.url!)
-        }
+    func testOffsetClampsPageAndLimit() {
+        XCTAssertEqual(LaunchLibraryEndpoint.offset(page: 1, limit: 20), 0)
+        XCTAssertEqual(LaunchLibraryEndpoint.offset(page: 3, limit: 20), 40)
+        XCTAssertEqual(LaunchLibraryEndpoint.offset(page: 0, limit: 20), 0)
+        XCTAssertEqual(LaunchLibraryEndpoint.offset(page: 2, limit: 0), 1)
     }
 }

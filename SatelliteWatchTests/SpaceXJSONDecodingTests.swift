@@ -79,10 +79,35 @@ final class SpaceXJSONDecodingTests: XCTestCase {
             LaunchLibraryListResponse<LaunchLibraryLaunchDTO>.self,
             from: Data(LaunchLibraryJSONFixtures.previousLaunches.utf8)
         )
-        let launch = Launch(library: dto.results[0], upcoming: false)
+        let launch = Launch(library: dto.results[0])
         XCTAssertEqual(launch.success, true)
+        XCTAssertFalse(launch.upcoming)
         XCTAssertEqual(launch.datePrecision, .day)
         XCTAssertEqual(launch.rocket?.id, "164")
         XCTAssertEqual(launch.links?.patch?.small, "https://example.com/patch.png")
+    }
+
+    func testLibraryLaunchMappingDerivesUpcomingWhenOutcomeUnknown() throws {
+        let dto = try SpaceXJSONDecoderFactory.make().decode(
+            LaunchLibraryListResponse<LaunchLibraryLaunchDTO>.self,
+            from: Data(LaunchLibraryJSONFixtures.upcomingLaunches.utf8)
+        )
+        let launch = Launch(library: dto.results[0])
+        XCTAssertTrue(launch.upcoming)
+        XCTAssertNil(launch.success)
+        XCTAssertEqual(launch.name, "Crew-11")
+    }
+
+    func testLibraryListMapsNextURLOntoPaginatedResponse() throws {
+        let dto = try SpaceXJSONDecoderFactory.make().decode(
+            LaunchLibraryListResponse<LaunchLibraryLaunchDTO>.self,
+            from: Data(LaunchLibraryJSONFixtures.launchesPage1.utf8)
+        )
+        let page = dto.mappedPage(page: 1, limit: 1) { Launch(library: $0) }
+        XCTAssertEqual(page.docs.map(\.id), ["upcoming-1"])
+        XCTAssertEqual(page.totalDocs, 2)
+        XCTAssertTrue(page.hasNextPage)
+        XCTAssertEqual(page.nextPage, 2)
+        XCTAssertFalse(page.hasPrevPage)
     }
 }

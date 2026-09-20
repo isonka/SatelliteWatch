@@ -1,7 +1,36 @@
 import Foundation
 
 struct LaunchLibraryListResponse<Item: Decodable & Sendable>: Decodable, Sendable {
+    let count: Int?
+    let next: String?
+    let previous: String?
     let results: [Item]
+
+    func mappedPage<Document>(
+        page: Int,
+        limit: Int,
+        transform: (Item) -> Document
+    ) -> PaginatedResponse<Document> {
+        let limit = max(1, limit)
+        let page = max(1, page)
+        let docs = results.map(transform)
+        let totalDocs = count ?? docs.count
+        let hasNextPage = !(next?.isEmpty ?? true)
+        let hasPrevPage = !(previous?.isEmpty ?? true)
+        let totalPages = max(1, Int((Double(totalDocs) / Double(limit)).rounded(.up)))
+
+        return PaginatedResponse(
+            docs: docs,
+            totalDocs: totalDocs,
+            limit: limit,
+            totalPages: totalPages,
+            page: page,
+            hasNextPage: hasNextPage,
+            hasPrevPage: hasPrevPage,
+            nextPage: hasNextPage ? page + 1 : nil,
+            prevPage: hasPrevPage || page > 1 ? max(page - 1, 1) : nil
+        )
+    }
 }
 
 struct LaunchLibraryLaunchDTO: Decodable, Sendable {

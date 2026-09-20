@@ -1,6 +1,11 @@
 import Foundation
 
 extension Launch {
+    init(library dto: LaunchLibraryLaunchDTO) {
+        let upcoming = dto.successFlag == nil
+        self.init(library: dto, upcoming: upcoming)
+    }
+
     init(library dto: LaunchLibraryLaunchDTO, upcoming: Bool) {
         let patchURL = dto.preferredImageURL
         let patch = patchURL.map {

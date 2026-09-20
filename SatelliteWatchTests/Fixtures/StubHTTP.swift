@@ -37,3 +37,13 @@ final class RequestCapture: @unchecked Sendable {
         lock.withLock { $0 }
     }
 }
+
+extension URLRequest {
+    func queryValue(_ name: String) -> String? {
+        guard let url else { return nil }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first { $0.name == name }?
+            .value
+    }
+}

@@ -23,7 +23,7 @@ Release builds always use the SpaceX API client.
 
 ```
 App/                      AppDependencies, DataSourceMode
-Core/Networking/          SpaceXAPIClient, LaunchLibraryAPIClient, shared protocol
+Core/Networking/          HTTPClient, SpaceXAPIClient, LaunchLibraryAPIClient, shared protocol
 Core/Models/              Launch, Rocket, Launchpad, PaginatedResponse
 Core/Presentation/        PaginatedListViewModel
 Core/Design/              Tokens, state views, RemoteImageLoader
@@ -64,17 +64,18 @@ When the API was up, `/v4/rockets` returned only a handful of vehicles (~4). Inf
 
 ## Launch Library 2
 
-Backup because SpaceX is archived (525), not a second pagination demo. **Debug defaults to it** (or `-mirrorData`).
+Backup because SpaceX is archived (525). **Debug defaults to it** (or `-mirrorData`).
 
-Each launches load is **2 GETs** (upcoming + previous, in parallel). Each rockets load is **1 GET**. The client does not follow `next`; lists are sliced in memory from that response.
+Paging matches the SpaceX client: `page` / `limit` from the list VM become `limit` + `offset=(page-1)*limit`. `hasNextPage` comes from the origin `next` URL, not an in-memory slice. Both APIs share `HTTPClient` (transport, status mapping, decode).
 
 | Resource | Endpoint |
 |----------|----------|
-| Upcoming | `GET /2.2.0/launch/upcoming/?lsp__id=121&limit=100` |
-| Previous | `GET /2.2.0/launch/previous/?lsp__id=121&limit=100` |
-| Rockets | `GET /2.2.0/config/launcher/?manufacturer__name=SpaceX&limit=20&mode=detailed` |
+| Launches | `GET /2.2.0/launch/?lsp__id=121&limit=&offset=&ordering=-net` |
+| Launch date filter | `net__gte` / `net__lte` (same local-day UTC bounds as SpaceX) |
+| Rockets | `GET /2.2.0/config/launcher/?manufacturer__name=SpaceX&limit=&offset=&mode=detailed` |
+| Rocket by id | `GET /2.2.0/config/launcher/{id}/` |
 
-DTOs map into the same `Launch` / `Rocket` types. Lists load from `.task`.
+DTOs map into the same `Launch` / `Rocket` types. `upcoming` is derived from launch status (no outcome yet). Lists load from `.task`.
 
 SpaceX launcher configs are ~13 rows, still one client page at `limit=20`. Use the **launches** list to demo infinite scroll on this source. Rocket paging stays a unit-test story.
 
