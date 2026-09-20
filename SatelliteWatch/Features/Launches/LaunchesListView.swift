@@ -1,23 +1,17 @@
 import SwiftUI
 
 struct LaunchesListView: View {
-    @State private var viewModel: LaunchesViewModel
     @State private var showingFilter = false
+    private let viewModel: LaunchesViewModel
     private let loadsOnAppear: Bool
     private let enablesPagination: Bool
-
-    init(service: any SpaceXServiceProtocol) {
-        _viewModel = State(initialValue: LaunchesViewModel(service: service))
-        loadsOnAppear = true
-        enablesPagination = true
-    }
 
     init(
         viewModel: LaunchesViewModel,
         loadsOnAppear: Bool = false,
         enablesPagination: Bool = false
     ) {
-        _viewModel = State(initialValue: viewModel)
+        self.viewModel = viewModel
         self.loadsOnAppear = loadsOnAppear
         self.enablesPagination = enablesPagination
     }
@@ -73,13 +67,10 @@ struct LaunchesListView: View {
         .sheet(isPresented: $showingFilter) {
             LaunchDateFilterView(viewModel: viewModel)
         }
-        .task {
+        .task(id: ObjectIdentifier(viewModel)) {
             guard loadsOnAppear else { return }
             guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
             await viewModel.loadInitial()
-        }
-        .onDisappear {
-            viewModel.cancelLoads()
         }
     }
 
@@ -134,45 +125,49 @@ struct LaunchesListView: View {
 
 #if DEBUG
 #Preview("Populated") {
-    NavigationStack {
-        LaunchesListView(
-            viewModel: .preview(launches: MockSpaceXService.previewLaunches)
-        )
+    let viewModel = LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches)
+    return NavigationStack {
+        LaunchesListView(viewModel: viewModel)
     }
+    .environment(AppDependencies.preview)
+    .environment(viewModel)
 }
 
 #Preview("Populated + loading more") {
-    NavigationStack {
-        LaunchesListView(
-            viewModel: .preview(
-                launches: MockSpaceXService.previewLaunches,
-                isLoadingMore: true,
-                hasNextPage: true
-            )
-        )
+    let viewModel = LaunchesViewModel.preview(
+        launches: MockSpaceXService.previewLaunches,
+        isLoadingMore: true,
+        hasNextPage: true
+    )
+    return NavigationStack {
+        LaunchesListView(viewModel: viewModel)
     }
+    .environment(AppDependencies.preview)
+    .environment(viewModel)
 }
 
 #Preview("Populated + inline error") {
-    NavigationStack {
-        LaunchesListView(
-            viewModel: .preview(
-                launches: MockSpaceXService.previewLaunches,
-                errorMessage: "Could not load the next page.",
-                hasNextPage: true
-            )
-        )
+    let viewModel = LaunchesViewModel.preview(
+        launches: MockSpaceXService.previewLaunches,
+        errorMessage: "Could not load the next page.",
+        hasNextPage: true
+    )
+    return NavigationStack {
+        LaunchesListView(viewModel: viewModel)
     }
+    .environment(AppDependencies.preview)
+    .environment(viewModel)
 }
 
 #Preview("Filtered empty") {
-    NavigationStack {
-        LaunchesListView(
-            viewModel: .preview(
-                startDate: Date(timeIntervalSince1970: 1_600_000_000),
-                endDate: Date(timeIntervalSince1970: 1_610_000_000)
-            )
-        )
+    let viewModel = LaunchesViewModel.preview(
+        startDate: Date(timeIntervalSince1970: 1_600_000_000),
+        endDate: Date(timeIntervalSince1970: 1_610_000_000)
+    )
+    return NavigationStack {
+        LaunchesListView(viewModel: viewModel)
     }
+    .environment(AppDependencies.preview)
+    .environment(viewModel)
 }
 #endif

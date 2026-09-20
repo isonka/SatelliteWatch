@@ -16,6 +16,10 @@ struct Rocket: Codable, Sendable, Equatable, Hashable, Identifiable {
     let flickrImages: [String]?
     let engines: RocketEngines?
 
+    func launches(from launches: [Launch]) -> [Launch] {
+        launches.filter { $0.rocket?.id == id }
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case name

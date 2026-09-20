@@ -1,22 +1,16 @@
 import SwiftUI
 
 struct RocketsListView: View {
-    @State private var viewModel: PaginatedListViewModel<Rocket>
+    private let viewModel: PaginatedListViewModel<Rocket>
     private let loadsOnAppear: Bool
     private let enablesPagination: Bool
-
-    init(service: any SpaceXServiceProtocol) {
-        _viewModel = State(initialValue: PaginatedListViewModel(service: service))
-        loadsOnAppear = true
-        enablesPagination = true
-    }
 
     init(
         viewModel: PaginatedListViewModel<Rocket>,
         loadsOnAppear: Bool = false,
         enablesPagination: Bool = false
     ) {
-        _viewModel = State(initialValue: viewModel)
+        self.viewModel = viewModel
         self.loadsOnAppear = loadsOnAppear
         self.enablesPagination = enablesPagination
     }
@@ -32,7 +26,7 @@ struct RocketsListView: View {
             } else if viewModel.items.isEmpty {
                 EmptyStateView(
                     title: "No rockets",
-                    systemImage: "airplane",
+                    systemImage: "flame.fill",
                     description: "There are no rockets to show right now."
                 )
             } else {
@@ -40,13 +34,10 @@ struct RocketsListView: View {
             }
         }
         .navigationTitle("Rockets")
-        .task {
+        .task(id: ObjectIdentifier(viewModel)) {
             guard loadsOnAppear else { return }
             guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
             await viewModel.loadInitial()
-        }
-        .onDisappear {
-            viewModel.cancelLoads()
         }
     }
 
@@ -106,6 +97,8 @@ struct RocketsListView: View {
             viewModel: .preview(rockets: [MockSpaceXService.previewRocket])
         )
     }
+    .environment(AppDependencies.preview)
+    .environment(LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches))
 }
 
 #Preview("Populated + loading more") {
@@ -118,5 +111,7 @@ struct RocketsListView: View {
             )
         )
     }
+    .environment(AppDependencies.preview)
+    .environment(LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches))
 }
 #endif

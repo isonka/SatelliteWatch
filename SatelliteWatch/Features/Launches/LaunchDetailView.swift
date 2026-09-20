@@ -3,6 +3,14 @@ import SwiftUI
 struct LaunchDetailView: View {
     let launch: Launch
 
+    @Environment(AppDependencies.self) private var dependencies
+    @State private var rocketViewModel: LaunchRocketViewModel
+
+    init(launch: Launch) {
+        self.launch = launch
+        _rocketViewModel = State(initialValue: LaunchRocketViewModel(launch: launch))
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -43,19 +51,11 @@ struct LaunchDetailView: View {
                     .accessibilityIdentifier("watch-launch-link")
                 }
 
-                if let rocket = launch.populatedRocket {
-                    NavigationLink(value: rocket) {
-                        RocketCardView(rocket: rocket)
-                    }
-                    .buttonStyle(.plain)
+                rocketSection
                     .padding(.horizontal, Spacing.lg)
-                } else {
-                    Text("Rocket details unavailable.")
-                        .font(AppFont.subheadline)
-                        .foregroundStyle(AppColor.secondaryText)
-                        .padding(.horizontal, Spacing.lg)
-                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .containerRelativeFrame(.horizontal, alignment: .leading)
             .padding(.bottom, Spacing.xl)
         }
         .navigationTitle("Launch")
@@ -63,6 +63,61 @@ struct LaunchDetailView: View {
         .accessibilityIdentifier("launch-detail-\(launch.id)")
         .navigationDestination(for: Rocket.self) { rocket in
             RocketDetailView(rocket: rocket)
+        }
+        .task {
+            await rocketViewModel.loadIfNeeded(using: dependencies.spaceXService)
+        }
+    }
+
+    @ViewBuilder
+    private var rocketSection: some View {
+        switch rocketViewModel.state {
+        case .loaded(let rocket):
+            NavigationLink(value: rocket) {
+                RocketCardView(rocket: rocket)
+            }
+            .buttonStyle(.plain)
+
+        case .unavailable:
+            Label(
+                "This data source does not provide rocket details for this launch.",
+                systemImage: "questionmark.circle"
+            )
+            .font(AppFont.subheadline)
+            .foregroundStyle(AppColor.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: CornerRadius.md))
+            .accessibilityIdentifier("rocket-card-unavailable")
+
+        case .idle, .loading:
+            HStack(spacing: Spacing.md) {
+                ProgressView()
+                Text("Loading rocket…")
+                    .font(AppFont.subheadline)
+                    .foregroundStyle(AppColor.secondaryText)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: CornerRadius.md))
+            .accessibilityIdentifier("rocket-card-loading")
+
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(AppFont.subheadline)
+                    .foregroundStyle(AppColor.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Retry") {
+                    Task { await rocketViewModel.retry() }
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("rocket-card-retry")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: CornerRadius.md))
         }
     }
 
@@ -94,5 +149,7 @@ struct LaunchDetailView: View {
     NavigationStack {
         LaunchDetailView(launch: MockSpaceXService.previewLaunches[0])
     }
+    .environment(AppDependencies.preview)
+    .environment(LaunchesViewModel.preview())
 }
 #endif

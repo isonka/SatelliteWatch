@@ -1,31 +1,60 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Bindable var dependencies: AppDependencies
+    @Environment(AppDependencies.self) private var dependencies
+    @State private var launchesViewModel: LaunchesViewModel?
+    @State private var rocketsViewModel: PaginatedListViewModel<Rocket>?
 
     var body: some View {
+        Group {
+            if let launchesViewModel, let rocketsViewModel {
+                tabs(launchesViewModel: launchesViewModel, rocketsViewModel: rocketsViewModel)
+                    .environment(launchesViewModel)
+            } else {
+                ProgressView()
+            }
+        }
+        .onChange(of: dependencies.dataSourceMode, initial: true) { _, _ in
+            let service = dependencies.spaceXService
+            launchesViewModel = LaunchesViewModel(service: service)
+            rocketsViewModel = PaginatedListViewModel(service: service)
+        }
+    }
+
+    private func tabs(
+        launchesViewModel: LaunchesViewModel,
+        rocketsViewModel: PaginatedListViewModel<Rocket>
+    ) -> some View {
         TabView {
             NavigationStack {
-                LaunchesListView(service: dependencies.spaceXService)
-                    .id(dependencies.dataSourceMode)
-                    .toolbar {
-                        #if DEBUG
-                        ToolbarItem(placement: .topBarTrailing) {
-                            dataSourceMenu
-                        }
-                        #endif
+                LaunchesListView(
+                    viewModel: launchesViewModel,
+                    loadsOnAppear: true,
+                    enablesPagination: true
+                )
+                .toolbar {
+                    #if DEBUG
+                    ToolbarItem(placement: .topBarTrailing) {
+                        dataSourceMenu
                     }
+                    #endif
+                }
             }
+            .id(dependencies.dataSourceMode)
             .tabItem {
                 Label("Launches", systemImage: "airplane.departure")
             }
 
             NavigationStack {
-                RocketsListView(service: dependencies.spaceXService)
-                    .id(dependencies.dataSourceMode)
+                RocketsListView(
+                    viewModel: rocketsViewModel,
+                    loadsOnAppear: true,
+                    enablesPagination: true
+                )
             }
+            .id(dependencies.dataSourceMode)
             .tabItem {
-                Label("Rockets", systemImage: "airplane")
+                Label("Rockets", systemImage: "flame.fill")
             }
         }
     }
@@ -33,15 +62,26 @@ struct ContentView: View {
     #if DEBUG
     private var dataSourceMenu: some View {
         Menu {
-            Picker("Data source", selection: $dependencies.dataSourceMode) {
-                ForEach(DataSourceMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
+            ForEach(DataSourceMode.allCases) { mode in
+                Button {
+                    dependencies.dataSourceMode = mode
+                } label: {
+                    Label(mode.menuTitle, systemImage: mode.symbolName)
+                    if mode == dependencies.dataSourceMode {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+
+            if let origin = dependencies.dataSourceMode.baseURLDescription {
+                Section("Origin") {
+                    Text(origin)
                 }
             }
         } label: {
             Label(
                 dependencies.dataSourceMode.title,
-                systemImage: dependencies.isUsingSampleData ? "shippingbox" : "network"
+                systemImage: dependencies.dataSourceMode.symbolName
             )
         }
         .accessibilityIdentifier("debug-data-source-menu")
@@ -51,5 +91,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(dependencies: .preview)
+    ContentView()
+        .environment(AppDependencies.preview)
 }

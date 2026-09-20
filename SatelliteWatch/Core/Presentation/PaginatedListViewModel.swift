@@ -12,7 +12,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
     private(set) var hasNextPage = true
 
     private let pageSize: Int
-    private let fetchPage: (Int, Int) async throws -> PaginatedResponse<Item>
+    private let fetchPage: @MainActor (Int, Int) async throws -> PaginatedResponse<Item>
     private var currentPage = 0
     private var loadTask: Task<Void, Never>?
     private var requestGeneration = 0
@@ -20,7 +20,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
 
     init(
         pageSize: Int = 20,
-        fetchPage: @escaping (Int, Int) async throws -> PaginatedResponse<Item>
+        fetchPage: @escaping @MainActor (Int, Int) async throws -> PaginatedResponse<Item>
     ) {
         self.pageSize = pageSize
         self.fetchPage = fetchPage
@@ -34,7 +34,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
         isRefreshing = true
         defer { isRefreshing = false }
         errorMessage = nil
-        await load(page: 1, mode: .replace)
+        await load(page: 1, mode: .refresh)
     }
 
     func retry() async {
@@ -67,6 +67,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
 
     private enum LoadMode {
         case replace
+        case refresh
         case append
     }
 
@@ -74,7 +75,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
         switch mode {
         case .append:
             guard loadTask == nil else { return }
-        case .replace:
+        case .replace, .refresh:
             loadTask?.cancel()
         }
 
@@ -90,6 +91,8 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
             isLoadingMore = false
             isInitialLoading = true
             errorMessage = nil
+        case .refresh:
+            isLoadingMore = false
         case .append:
             isLoadingMore = true
         }
@@ -123,7 +126,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
             guard !Task.isCancelled, generation == requestGeneration else { return }
 
             switch mode {
-            case .replace:
+            case .replace, .refresh:
                 knownIDs = Set(response.docs.map(\.id))
                 items = response.docs
             case .append:

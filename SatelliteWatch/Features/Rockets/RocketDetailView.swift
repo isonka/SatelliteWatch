@@ -3,10 +3,14 @@ import SwiftUI
 struct RocketDetailView: View {
     let rocket: Rocket
 
+    @Environment(LaunchesViewModel.self) private var launchesViewModel
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                RemoteImageView(url: rocket.primaryImageURL, height: 240)
+        List {
+            Section {
+                RemoteImageView(url: rocket.primaryImageURL, height: 220)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
 
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Text(rocket.name)
@@ -16,20 +20,48 @@ struct RocketDetailView: View {
 
                     labeledRow("Type", rocket.type ?? "Unknown")
                     labeledRow("Status", activeText)
-                    labeledRow("Engines", enginesText)
+                    if let enginesText {
+                        labeledRow("Engines", enginesText)
+                    }
 
                     Text(descriptionText)
                         .font(AppFont.body)
                         .foregroundStyle(hasDescription ? AppColor.primaryText : AppColor.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, Spacing.lg)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .listRowSeparator(.hidden)
             }
-            .padding(.bottom, Spacing.xl)
+
+            Section("Launches") {
+                if matchingLaunches.isEmpty {
+                    Text("No launches from the current list use this rocket.")
+                        .font(AppFont.subheadline)
+                        .foregroundStyle(AppColor.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("rocket-launches-empty")
+                } else {
+                    ForEach(matchingLaunches) { launch in
+                        NavigationLink(value: launch) {
+                            LaunchRowView(launch: launch)
+                        }
+                        .accessibilityIdentifier("rocket-launch-row-\(launch.id)")
+                    }
+                }
+            }
         }
+        .listStyle(.plain)
         .navigationTitle("Rocket")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("rocket-detail-\(rocket.id)")
+        .navigationDestination(for: Launch.self) { launch in
+            LaunchDetailView(launch: launch)
+        }
+    }
+
+    private var matchingLaunches: [Launch] {
+        rocket.launches(from: launchesViewModel.items)
     }
 
     private var hasDescription: Bool {
@@ -48,10 +80,16 @@ struct RocketDetailView: View {
         }
     }
 
-    private var enginesText: String {
-        let number = rocket.engines?.number.map(String.init) ?? "—"
-        let type = rocket.engines?.type ?? "unknown type"
-        let version = rocket.engines?.version.map { " \($0)" } ?? ""
+    private var enginesText: String? {
+        guard let engines = rocket.engines,
+              engines.number != nil || engines.type != nil || engines.version != nil
+        else {
+            return nil
+        }
+
+        let number = engines.number.map(String.init) ?? "—"
+        let type = engines.type ?? "unknown type"
+        let version = engines.version.map { " \($0)" } ?? ""
         return "\(number) × \(type)\(version)"
     }
 
@@ -72,8 +110,12 @@ struct RocketDetailView: View {
 
 #if DEBUG
 #Preview {
-    NavigationStack {
+    let launchesViewModel = LaunchesViewModel.preview(launches: MockSpaceXService.previewLaunches)
+
+    return NavigationStack {
         RocketDetailView(rocket: MockSpaceXService.previewRocket)
     }
+    .environment(AppDependencies.preview)
+    .environment(launchesViewModel)
 }
 #endif

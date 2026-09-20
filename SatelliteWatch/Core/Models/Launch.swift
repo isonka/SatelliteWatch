@@ -21,7 +21,7 @@ struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
     let dateUTC: Date
     let datePrecision: DatePrecision?
     let links: LaunchLinks?
-    let rocket: RocketRef
+    let rocket: RocketRef?
     let launchpad: LaunchpadRef
 
     enum CodingKeys: String, CodingKey {
@@ -69,6 +69,10 @@ struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
             return rocket
         }
         return nil
+    }
+
+    var hasRocketReference: Bool {
+        rocket != nil
     }
 }
 
