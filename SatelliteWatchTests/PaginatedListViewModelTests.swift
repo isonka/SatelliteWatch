@@ -39,9 +39,9 @@ final class PaginatedListViewModelTests: XCTestCase {
         await viewModel.loadInitial()
         XCTAssertEqual(viewModel.items.map(\.id), ["a"])
 
-        service.delayNanoseconds = 200_000_000
+        service.parkFetches = true
         let refresh = Task { await viewModel.refresh() }
-        try? await Task.sleep(nanoseconds: 20_000_000)
+        await waitUntil { service.rocketListFetchCount == 2 }
         refresh.cancel()
         await refresh.value
 
@@ -60,17 +60,19 @@ final class PaginatedListViewModelTests: XCTestCase {
         }
         await viewModel.loadInitial()
 
-        service.delayNanoseconds = 200_000_000
+        service.parkFetches = true
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "b")], page: 1, hasNextPage: false)
         ]
         let refresh = Task { await viewModel.refresh() }
-        try? await Task.sleep(nanoseconds: 20_000_000)
+        await waitUntil { service.rocketListFetchCount == 2 }
 
         XCTAssertEqual(viewModel.items.map(\.id), ["a"])
         XCTAssertTrue(viewModel.isRefreshing)
         XCTAssertFalse(viewModel.isInitialLoading)
 
+        service.parkFetches = false
+        service.releaseParkedFetch()
         await refresh.value
         XCTAssertEqual(viewModel.items.map(\.id), ["b"])
         XCTAssertFalse(viewModel.isRefreshing)

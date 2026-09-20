@@ -49,7 +49,7 @@ enum DataSourceMode: String, CaseIterable, Identifiable, Sendable {
 
     static func resolve(
         from arguments: [String],
-        fallback: DataSourceMode = .live
+        fallback: DataSourceMode = .mirror
     ) -> DataSourceMode {
         if arguments.contains(sampleDataLaunchArgument) {
             return .sample

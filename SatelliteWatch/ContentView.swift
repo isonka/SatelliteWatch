@@ -4,6 +4,7 @@ struct ContentView: View {
     @Environment(AppDependencies.self) private var dependencies
     @State private var launchesViewModel: LaunchesViewModel?
     @State private var rocketsViewModel: PaginatedListViewModel<Rocket>?
+    @State private var selectedTab: AppTab = .launches
 
     var body: some View {
         Group {
@@ -18,6 +19,7 @@ struct ContentView: View {
             let service = dependencies.spaceXService
             launchesViewModel = LaunchesViewModel(service: service)
             rocketsViewModel = PaginatedListViewModel(service: service)
+            selectedTab = .launches
         }
     }
 
@@ -25,11 +27,10 @@ struct ContentView: View {
         launchesViewModel: LaunchesViewModel,
         rocketsViewModel: PaginatedListViewModel<Rocket>
     ) -> some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 LaunchesListView(
                     viewModel: launchesViewModel,
-                    loadsOnAppear: true,
                     enablesPagination: true
                 )
                 .toolbar {
@@ -44,11 +45,11 @@ struct ContentView: View {
             .tabItem {
                 Label("Launches", systemImage: "airplane.departure")
             }
+            .tag(AppTab.launches)
 
             NavigationStack {
                 RocketsListView(
                     viewModel: rocketsViewModel,
-                    loadsOnAppear: true,
                     enablesPagination: true
                 )
             }
@@ -56,6 +57,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Rockets", systemImage: "flame.fill")
             }
+            .tag(AppTab.rockets)
         }
     }
 

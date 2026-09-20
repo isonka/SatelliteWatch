@@ -10,8 +10,7 @@ actor RemoteImageLoader {
 
     init(
         fetch: @escaping @Sendable (URL) async throws -> Data = { url in
-            let (data, _) = try await URLSession.shared.data(from: url)
-            return data
+            try await RemoteImageLoader.fetchHTTPData(from: url)
         }
     ) {
         self.fetch = fetch
@@ -20,6 +19,7 @@ actor RemoteImageLoader {
     }
 
     func image(from url: URL, maxPixelSize: CGFloat) async -> UIImage? {
+        guard HTTPURL.isAllowed(url) else { return nil }
         let key = Self.cacheKey(url: url, maxPixelSize: maxPixelSize)
         if let cached = cache.object(forKey: key) {
             return cached
@@ -67,6 +67,23 @@ actor RemoteImageLoader {
         }
 
         return UIImage(cgImage: cgImage)
+    }
+
+    nonisolated static func fetchHTTPData(from url: URL) async throws -> Data {
+        guard HTTPURL.isAllowed(url) else {
+            throw URLError(.unsupportedURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        return try dataIfHTTPSuccess(data: data, response: response)
+    }
+
+    nonisolated static func dataIfHTTPSuccess(data: Data, response: URLResponse) throws -> Data {
+        guard let http = response as? HTTPURLResponse,
+              (200...299).contains(http.statusCode)
+        else {
+            throw URLError(.badServerResponse)
+        }
+        return data
     }
 
     private func performLoad(url: URL, key: NSString, maxPixelSize: CGFloat) async -> UIImage? {

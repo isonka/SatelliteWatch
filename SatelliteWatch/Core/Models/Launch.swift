@@ -22,7 +22,7 @@ struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
     let datePrecision: DatePrecision?
     let links: LaunchLinks?
     let rocket: RocketRef?
-    let launchpad: LaunchpadRef
+    let launchpad: LaunchpadRef?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -39,27 +39,19 @@ struct Launch: Codable, Sendable, Equatable, Hashable, Identifiable {
 
     var patchImageURL: URL? {
         [links?.patch?.large, links?.patch?.small]
-            .compactMap { $0 }
-            .compactMap(URL.init(string:))
+            .compactMap(HTTPURL.parse)
             .first
     }
 
     var webcastURL: URL? {
-        guard let webcast = links?.webcast,
-              let url = URL(string: webcast),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https"
-        else {
-            return nil
-        }
-        return url
+        HTTPURL.parse(links?.webcast)
     }
 
     var launchSiteName: String {
         switch launchpad {
-        case .id:
+        case .none, .some(.id):
             return "Unknown launch site"
-        case .populated(let pad):
+        case .some(.populated(let pad)):
             return pad.displayName
         }
     }

@@ -15,8 +15,10 @@ final class AppDependencies {
 
     init(dataSourceMode: DataSourceMode? = nil) {
         #if DEBUG
+        // SpaceX origin returns 525 while archived; Debug defaults to Launch Library.
         let mode = dataSourceMode ?? DataSourceMode.resolve(
-            from: ProcessInfo.processInfo.arguments
+            from: ProcessInfo.processInfo.arguments,
+            fallback: .mirror
         )
         #else
         let mode = dataSourceMode ?? .live
@@ -34,7 +36,7 @@ final class AppDependencies {
         case .live:
             SpaceXAPIClient()
         case .mirror:
-            LaunchLibraryAPIClient(cacheDirectory: LaunchLibraryEndpoint.cacheDirectory)
+            LaunchLibraryAPIClient()
         case .sample:
             MockSpaceXService()
         }

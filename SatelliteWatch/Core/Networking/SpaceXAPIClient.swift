@@ -2,19 +2,13 @@ import Foundation
 
 struct SpaceXAPIClient: SpaceXServiceProtocol {
     private let transport: @Sendable (URLRequest) async throws -> (Data, URLResponse)
-    private let decoder: JSONDecoder
-    private let encoder: JSONEncoder
 
     init(
         transport: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = {
             try await URLSession.shared.data(for: $0)
-        },
-        decoder: JSONDecoder = SpaceXJSONDecoderFactory.make(),
-        encoder: JSONEncoder = SpaceXJSONEncoderFactory.make()
+        }
     ) {
         self.transport = transport
-        self.decoder = decoder
-        self.encoder = encoder
     }
 
     func fetchLaunches(
@@ -75,7 +69,7 @@ struct SpaceXAPIClient: SpaceXServiceProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try encoder.encode(body)
+        request.httpBody = try SpaceXJSONEncoderFactory.make().encode(body)
         return try await perform(request)
     }
 
@@ -109,7 +103,7 @@ struct SpaceXAPIClient: SpaceXServiceProtocol {
         }
 
         do {
-            return try decoder.decode(Response.self, from: data)
+            return try SpaceXJSONDecoderFactory.make().decode(Response.self, from: data)
         } catch {
             throw SpaceXAPIError.decoding(error.localizedDescription)
         }

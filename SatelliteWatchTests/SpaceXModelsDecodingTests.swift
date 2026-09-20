@@ -27,6 +27,29 @@ final class SpaceXModelsDecodingTests: XCTestCase {
         XCTAssertEqual(launch.launchSiteName, "Unknown launch site")
     }
 
+    func testDecodesNullLaunchpadAndRejectsFilePatch() throws {
+        let launch = try SpaceXJSONDecoderFactory.make()
+            .decode(Launch.self, from: SpaceXJSONFixtures.launchWithNullLaunchpadAndFilePatch)
+
+        XCTAssertNil(launch.launchpad)
+        XCTAssertEqual(launch.launchSiteName, "Unknown launch site")
+        XCTAssertNil(launch.patchImageURL)
+        XCTAssertEqual(launch.webcastURL?.scheme, "https")
+    }
+
+    func testHTTPURLAllowsWebSchemesOnly() {
+        XCTAssertNotNil(HTTPURL.parse("https://example.com/a.png"))
+        XCTAssertNotNil(HTTPURL.parse("http://example.com/a.png"))
+        XCTAssertNil(HTTPURL.parse("file:///tmp/a.png"))
+        XCTAssertNil(HTTPURL.parse("javascript:alert(1)"))
+        XCTAssertNil(HTTPURL.parse(nil))
+    }
+
+    func testParsesISO8601WithAndWithoutFractionalSeconds() {
+        XCTAssertNotNil(SpaceXJSONDecoderFactory.parseISO8601("2020-03-07T04:50:31.000Z"))
+        XCTAssertNotNil(SpaceXJSONDecoderFactory.parseISO8601("2026-09-20T01:47:00Z"))
+    }
+
     func testDecodesRocketPage() throws {
         let response = try SpaceXJSONDecoderFactory.make()
             .decode(PaginatedResponse<Rocket>.self, from: SpaceXJSONFixtures.rocketPage)

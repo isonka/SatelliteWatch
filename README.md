@@ -13,8 +13,11 @@ Open `SatelliteWatch.xcodeproj` and run the **SatelliteWatch** scheme.
 
 ## Quick start for reviewers
 The SpaceX API is archived and currently returns HTTP 525.
-To see live data: Run (Debug) → toolbar data-source menu → Launch Library 2.
-Offline: choose Sample data (also used by UI tests).
+
+**Debug Run uses Launch Library 2 by default** so a fresh clone shows data immediately.
+Switch sources from the Launches toolbar menu (SpaceX API / Launch Library 2 / Sample data).
+Offline or UI tests: Sample data (`-sampleData`).
+Release builds always use the SpaceX API client.
 
 ## Architecture
 
@@ -35,12 +38,12 @@ Both providers implement `SpaceXServiceProtocol`. `AppDependencies` picks the cl
 
 The assignment targets the public [SpaceX API](https://github.com/r-spacex/SpaceX-API) (`api.spacexdata.com`). That project is **archived and unmaintained**. The origin currently fails every request with **HTTP 525** (Cloudflare SSL handshake), so a Release build that only talks to SpaceX shows an error screen.
 
-[Launch Library 2](https://thespacedevs.com/llapi) is the working backup: same launches/rockets domain, still free, and it still serves images. It is **opt-in**, not an automatic failover — Debug toolbar or `-mirrorData` — so the app still implements the assigned SpaceX client, and a reviewer can switch when that API is dark.
+[Launch Library 2](https://thespacedevs.com/llapi) is the working backup: same launches/rockets domain, still free, and it still serves images. **Debug defaults to it** (or `-mirrorData`). Release always uses SpaceX so the assigned client stays the shipping path. Toolbar switch is manual — not automatic failover on 525.
 
 | Mode | When | Client |
 |------|------|--------|
-| SpaceX API | Default. Release always. | `SpaceXAPIClient` → `https://api.spacexdata.com` |
-| Launch Library 2 | Debug menu or `-mirrorData` | `LaunchLibraryAPIClient` → `https://ll.thespacedevs.com` |
+| Launch Library 2 | Debug default; menu or `-mirrorData` | `LaunchLibraryAPIClient` → `https://ll.thespacedevs.com` |
+| SpaceX API | Release always; Debug menu | `SpaceXAPIClient` → `https://api.spacexdata.com` |
 | Sample data | Debug menu or `-sampleData` | `MockSpaceXService` (Starlink 6-1, Crew-10, Falcon 9) |
 
 UI tests pass `-sampleData`.
@@ -61,9 +64,9 @@ When the API was up, `/v4/rockets` returned only a handful of vehicles (~4). Inf
 
 ## Launch Library 2
 
-Backup because SpaceX is archived (525), not because we needed a second pagination demo. Anonymous quota is **15 requests / hour**.
+Backup because SpaceX is archived (525), not a second pagination demo. **Debug defaults to it** (or `-mirrorData`).
 
-Each snapshot reload costs **3 GETs**, in parallel where possible, then pages in memory. The client does not follow `next`.
+Each launches load is **2 GETs** (upcoming + previous, in parallel). Each rockets load is **1 GET**. The client does not follow `next`; lists are sliced in memory from that response.
 
 | Resource | Endpoint |
 |----------|----------|
@@ -71,11 +74,11 @@ Each snapshot reload costs **3 GETs**, in parallel where possible, then pages in
 | Previous | `GET /2.2.0/launch/previous/?lsp__id=121&limit=100` |
 | Rockets | `GET /2.2.0/config/launcher/?manufacturer__name=SpaceX&limit=20&mode=detailed` |
 
-DTOs map into the same `Launch` / `Rocket` types. Snapshot lives in memory and on disk (1-hour TTL). Scroll and date filter after a load are free. Pull-to-refresh inside the TTL returns the cached snapshot. After the TTL, a failed network reload still shows the last disk snapshot instead of an empty error. Lists load from `.task`, not `.onAppear`.
+DTOs map into the same `Launch` / `Rocket` types. Lists load from `.task`.
 
 SpaceX launcher configs are ~13 rows, still one client page at `limit=20`. Use the **launches** list to demo infinite scroll on this source. Rocket paging stays a unit-test story.
 
-Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launcher payload (`engines` is nil, so Rocket Detail hides that row), `type` is the family name, and a single `image_url` is stored as `flickrImages`.
+Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launcher payload (`engines` is nil, so Rocket Detail shows “Not provided by this data source”), `type` is the family name, and a single `image_url` is stored as `flickrImages`.
 
 ## Decisions
 
@@ -85,7 +88,7 @@ Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launc
 
 **Paging:** one in-flight request, id dedupe, ignore stale generations, keep rows when an append fails. The inline error has a **Retry** footer that calls `retry()`; scrolling the last rows still works as a second path. SwiftUI `.task` cancellation ends the load when the list leaves the hierarchy for good. We do **not** cancel on `.onDisappear` (that also fires when pushing a detail or switching tabs).
 
-**Rocket Detail launches:** the screen lists launches already loaded in `LaunchesViewModel` that reference this rocket. That set follows the current date filter and whatever pages have been fetched. It is not a per-rocket API query.
+**Rocket Detail launches:** section titled “From loaded launches” — launches already in `LaunchesViewModel` that reference this rocket. Follows the current date filter and fetched pages. Not a per-rocket API query.
 
 **Images:** `RemoteImageLoader` (in-memory cache, downsampled). Not `AsyncImage`.
 

@@ -62,6 +62,43 @@ final class RemoteImageLoaderTests: XCTestCase {
         XCTAssertEqual(count, 1)
     }
 
+    func testFileURLDoesNotFetch() async {
+        let stub = StubImageFetch(data: Data())
+        let loader = RemoteImageLoader { url in
+            try await stub.fetch(url)
+        }
+        let image = await loader.image(
+            from: URL(string: "file:///tmp/secret.png")!,
+            maxPixelSize: 16
+        )
+
+        XCTAssertNil(image)
+        let count = await stub.count
+        XCTAssertEqual(count, 0)
+    }
+
+    func testHTTPErrorStatusIsRejected() throws {
+        let url = URL(string: "https://images.test/missing.png")!
+        let notFound = HTTPURLResponse(
+            url: url,
+            statusCode: 404,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        XCTAssertThrowsError(
+            try RemoteImageLoader.dataIfHTTPSuccess(data: Data(), response: notFound)
+        )
+
+        let ok = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        let body = Data("ok".utf8)
+        XCTAssertEqual(try RemoteImageLoader.dataIfHTTPSuccess(data: body, response: ok), body)
+    }
+
     private func pngData() throws -> Data {
         let data = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 32)).image { renderer in
             UIColor.red.setFill()

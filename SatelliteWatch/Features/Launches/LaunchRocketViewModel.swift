@@ -8,7 +8,7 @@ final class LaunchRocketViewModel {
         case idle
         case loading
         case loaded(Rocket)
-        case failed(String)        
+        case failed(String)
         case unavailable
     }
 

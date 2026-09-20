@@ -18,15 +18,13 @@ enum SpaceXJSONDecoderFactory {
     }
 
     static func parseISO8601(_ value: String) -> Date? {
-        let withFractional = ISO8601DateFormatter()
-        withFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = withFractional.date(from: value) {
+        if let date = try? Date(
+            value,
+            strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        ) {
             return date
         }
-
-        let withoutFractional = ISO8601DateFormatter()
-        withoutFractional.formatOptions = [.withInternetDateTime]
-        return withoutFractional.date(from: value)
+        return try? Date(value, strategy: Date.ISO8601FormatStyle())
     }
 }
 

@@ -6,12 +6,6 @@ enum LaunchLibraryEndpoint {
     static let spaceXAgencyID = 121
     static let launchLimit = 100
     static let rocketLimit = 20
-    static let cacheTTL: TimeInterval = 60 * 60
-
-    static var cacheDirectory: URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appending(path: "LaunchLibrary", directoryHint: .isDirectory)
-    }
 
     case upcomingLaunches
     case previousLaunches

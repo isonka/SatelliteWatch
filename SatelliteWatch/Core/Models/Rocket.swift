@@ -33,7 +33,20 @@ struct Rocket: Codable, Sendable, Equatable, Hashable, Identifiable {
 
     var primaryImageURL: URL? {
         flickrImages?
-            .compactMap(URL.init(string:))
+            .compactMap(HTTPURL.parse)
             .first
+    }
+
+    var enginesDisplayText: String {
+        guard let engines,
+              engines.number != nil || engines.type != nil || engines.version != nil
+        else {
+            return "Not provided by this data source"
+        }
+
+        let number = engines.number.map(String.init) ?? "—"
+        let type = engines.type ?? "unknown type"
+        let version = engines.version.map { " \($0)" } ?? ""
+        return "\(number) × \(type)\(version)"
     }
 }

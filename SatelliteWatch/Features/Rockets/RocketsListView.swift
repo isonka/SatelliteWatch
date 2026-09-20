@@ -2,16 +2,13 @@ import SwiftUI
 
 struct RocketsListView: View {
     private let viewModel: PaginatedListViewModel<Rocket>
-    private let loadsOnAppear: Bool
     private let enablesPagination: Bool
 
     init(
         viewModel: PaginatedListViewModel<Rocket>,
-        loadsOnAppear: Bool = false,
         enablesPagination: Bool = false
     ) {
         self.viewModel = viewModel
-        self.loadsOnAppear = loadsOnAppear
         self.enablesPagination = enablesPagination
     }
 
@@ -89,7 +86,6 @@ struct RocketsListView: View {
     }
 
     private func loadIfNeeded() async {
-        guard loadsOnAppear else { return }
         guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
         await viewModel.loadInitial()
     }

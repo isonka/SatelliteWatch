@@ -67,6 +67,27 @@ enum SpaceXJSONFixtures {
     }
     """.data(using: .utf8)!
 
+    static let launchWithNullLaunchpadAndFilePatch = """
+    {
+      "id": "launch-3",
+      "name": "Padless Mission",
+      "details": null,
+      "success": true,
+      "upcoming": false,
+      "date_utc": "2020-03-07T04:50:31.000Z",
+      "date_precision": "hour",
+      "links": {
+        "patch": {
+          "small": "file:///tmp/small.png",
+          "large": "file:///tmp/large.png"
+        },
+        "webcast": "https://www.youtube.com/watch?v=abc"
+      },
+      "rocket": "falcon9",
+      "launchpad": null
+    }
+    """.data(using: .utf8)!
+
     static let rocket = """
     {
       "id": "falcon9",

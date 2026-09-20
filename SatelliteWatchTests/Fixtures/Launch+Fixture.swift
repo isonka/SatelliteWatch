@@ -12,7 +12,7 @@ extension Launch {
         datePrecision: DatePrecision? = .hour,
         links: LaunchLinks? = .fixture(),
         rocket: RocketRef? = .populated(.fixture()),
-        launchpad: LaunchpadRef = .populated(.fixture())
+        launchpad: LaunchpadRef? = .populated(.fixture())
     ) -> Launch {
         Launch(
             id: id,

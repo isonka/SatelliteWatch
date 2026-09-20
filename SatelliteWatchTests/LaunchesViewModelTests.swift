@@ -47,7 +47,6 @@ final class LaunchesViewModelTests: XCTestCase {
 
     func testIgnoresAppendWhileLoadInFlight() async {
         let service = ControllableSpaceXService()
-        service.delayNanoseconds = 150_000_000
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "1")], page: 1, hasNextPage: true),
             2: .fixture(docs: [Launch.fixture(id: "2")], page: 2, hasNextPage: false)
@@ -56,9 +55,13 @@ final class LaunchesViewModelTests: XCTestCase {
         let viewModel = LaunchesViewModel(service: service, pageSize: 1)
         await viewModel.loadInitial()
 
+        service.parkFetches = true
         let item = viewModel.launches.last
         async let first: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
+        await waitUntil { service.launchFetchCount == 2 }
         async let second: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
+        service.parkFetches = false
+        service.releaseParkedFetch()
         await first
         await second
 
@@ -76,11 +79,12 @@ final class LaunchesViewModelTests: XCTestCase {
         let viewModel = LaunchesViewModel(service: service, pageSize: 1)
         await viewModel.loadInitial()
 
-        service.delayNanoseconds = 200_000_000
+        service.parkFetches = true
         let item = viewModel.launches.last
         async let append: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
+        await waitUntil { service.launchFetchCount == 2 }
 
-        service.delayNanoseconds = 0
+        service.parkFetches = false
         service.launchesPages[1] = .fixture(
             docs: [Launch.fixture(id: "replaced")],
             page: 1,
@@ -135,15 +139,16 @@ final class LaunchesViewModelTests: XCTestCase {
 
     func testIgnoresStaleResponsesAfterNewerReplace() async {
         let service = ControllableSpaceXService()
-        service.delayNanoseconds = 200_000_000
+        service.parkFetches = true
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "slow")], page: 1, hasNextPage: false)
         ]
 
         let viewModel = LaunchesViewModel(service: service)
         async let slow: Void = viewModel.loadInitial()
+        await waitUntil { service.launchFetchCount == 1 }
 
-        service.delayNanoseconds = 0
+        service.parkFetches = false
         service.launchesPages = [
             1: .fixture(docs: [Launch.fixture(id: "fast")], page: 1, hasNextPage: false)
         ]

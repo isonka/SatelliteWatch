@@ -43,7 +43,6 @@ final class RocketsViewModelTests: XCTestCase {
 
     func testIgnoresAppendWhileLoadInFlight() async {
         let service = ControllableSpaceXService()
-        service.delayNanoseconds = 150_000_000
         service.rocketsPages = [
             1: .fixture(docs: [Rocket.fixture(id: "a")], page: 1, hasNextPage: true),
             2: .fixture(docs: [Rocket.fixture(id: "b")], page: 2, hasNextPage: false)
@@ -52,13 +51,18 @@ final class RocketsViewModelTests: XCTestCase {
         let viewModel = PaginatedListViewModel<Rocket>(service: service, pageSize: 1)
         await viewModel.loadInitial()
 
+        service.parkFetches = true
         let item = viewModel.items.last
         async let first: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
+        await waitUntil { service.rocketListFetchCount == 2 }
         async let second: Void = viewModel.loadNextPageIfNeeded(currentItem: item)
+        service.parkFetches = false
+        service.releaseParkedFetch()
         await first
         await second
 
         XCTAssertEqual(viewModel.items.map(\.id), ["a", "b"])
+        XCTAssertEqual(service.rocketListFetchCount, 2)
     }
 
     func testPreservesRowsWhenAppendFails() async {

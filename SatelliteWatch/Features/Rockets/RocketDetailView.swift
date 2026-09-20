@@ -20,9 +20,7 @@ struct RocketDetailView: View {
 
                     labeledRow("Type", rocket.type ?? "Unknown")
                     labeledRow("Status", activeText)
-                    if let enginesText {
-                        labeledRow("Engines", enginesText)
-                    }
+                    labeledRow("Engines", rocket.enginesDisplayText)
 
                     Text(descriptionText ?? "No description available.")
                         .font(AppFont.body)
@@ -34,7 +32,7 @@ struct RocketDetailView: View {
                 .listRowSeparator(.hidden)
             }
 
-            Section("Launches") {
+            Section("From loaded launches") {
                 if matchingLaunches.isEmpty {
                     Text("No launches from the current list use this rocket.")
                         .font(AppFont.subheadline)
@@ -73,19 +71,6 @@ struct RocketDetailView: View {
     private var activeText: String {
         guard let active = rocket.active else { return "Unknown" }
         return active ? "Active" : "Inactive"
-    }
-
-    private var enginesText: String? {
-        guard let engines = rocket.engines,
-              engines.number != nil || engines.type != nil || engines.version != nil
-        else {
-            return nil
-        }
-
-        let number = engines.number.map(String.init) ?? "—"
-        let type = engines.type ?? "unknown type"
-        let version = engines.version.map { " \($0)" } ?? ""
-        return "\(number) × \(type)\(version)"
     }
 
     private func labeledRow(_ title: String, _ value: String) -> some View {

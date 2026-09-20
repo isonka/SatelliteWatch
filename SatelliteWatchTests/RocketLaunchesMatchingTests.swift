@@ -17,4 +17,19 @@ final class RocketLaunchesMatchingTests: XCTestCase {
         XCTAssertEqual(heavy.launches(from: [matching, other]).map(\.id), ["c"])
         XCTAssertTrue(falcon.launches(from: []).isEmpty)
     }
+
+    func testEnginesDisplayTextFormatsKnownEngines() {
+        let rocket = Rocket.fixture(engines: .fixture(number: 9, type: "merlin", version: "1D+"))
+        XCTAssertEqual(rocket.enginesDisplayText, "9 × merlin 1D+")
+    }
+
+    func testEnginesDisplayTextWhenMissingMatchesLeadCopy() {
+        let rocket = Rocket.fixture(engines: nil)
+        XCTAssertEqual(rocket.enginesDisplayText, "Not provided by this data source")
+    }
+
+    func testEnginesDisplayTextWhenAllEngineFieldsNil() {
+        let rocket = Rocket.fixture(engines: RocketEngines(number: nil, type: nil, version: nil))
+        XCTAssertEqual(rocket.enginesDisplayText, "Not provided by this data source")
+    }
 }

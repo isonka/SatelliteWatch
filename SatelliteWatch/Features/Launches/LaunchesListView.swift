@@ -3,16 +3,13 @@ import SwiftUI
 struct LaunchesListView: View {
     @State private var showingFilter = false
     private let viewModel: LaunchesViewModel
-    private let loadsOnAppear: Bool
     private let enablesPagination: Bool
 
     init(
         viewModel: LaunchesViewModel,
-        loadsOnAppear: Bool = false,
         enablesPagination: Bool = false
     ) {
         self.viewModel = viewModel
-        self.loadsOnAppear = loadsOnAppear
         self.enablesPagination = enablesPagination
     }
 
@@ -122,7 +119,6 @@ struct LaunchesListView: View {
     }
 
     private func loadIfNeeded() async {
-        guard loadsOnAppear else { return }
         guard viewModel.items.isEmpty, !viewModel.isInitialLoading else { return }
         await viewModel.loadInitial()
     }
