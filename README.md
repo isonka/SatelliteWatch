@@ -78,8 +78,6 @@ Paging matches the SpaceX client: `page` / `limit` from the list VM become `limi
 
 DTOs map into the same `Launch` / `Rocket` types. `upcoming` is derived from launch status (no outcome yet). Lists load from `.task`.
 
-SpaceX launcher configs are ~13 rows, still one client page at `limit=20`. Use the **launches** list to demo infinite scroll on this source. Rocket paging stays a unit-test story.
-
 Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launcher payload (`engines` is nil, so Rocket Detail shows “Not provided by this data source”), `type` is the family name, and a single `image_url` is stored as `flickrImages`.
 
 ## Decisions
@@ -88,7 +86,7 @@ Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launc
 
 **Unpopulated rocket on a launch:** if the list payload has only a rocket id, the launch detail card calls `fetchRocket(id:)` instead of showing “unavailable.”
 
-**Paging:** one in-flight request, id dedupe, ignore stale generations, keep rows when an append fails. The inline error has a **Retry** footer that calls `retry()`; scrolling the last rows still works as a second path. SwiftUI `.task` cancellation ends the load when the list leaves the hierarchy for good. We do **not** cancel on `.onDisappear` (that also fires when pushing a detail or switching tabs).
+**Paging:** one in-flight request, id dedupe, ignore stale generations, keep rows when an append fails. The inline error has a **Retry** footer that calls `retry()`; scrolling the last rows still works as a second path. SwiftUI `.task` cancellation ends the load when the list leaves the hierarchy for good.
 
 **Rocket Detail launches:** section titled “From loaded launches” — launches already in `LaunchesViewModel` that reference this rocket. Follows the current date filter and fetched pages. Not a per-rocket API query.
 
