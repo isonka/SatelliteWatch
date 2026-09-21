@@ -80,7 +80,7 @@ private extension MockSpaceXService {
         active: true,
         description: "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX.",
         successRatePct: 98,
-        flickrImages: ["https://farm1.staticflickr.com/929/28760836339_a04b3d9d14_b.jpg"],
+        flickrImages: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREofow3jHyl-4BTmXcxPPc76_PUm4inuy7o4qC7e9R2g"],
         engines: RocketEngines(number: 9, type: "merlin", version: "1D+")
     )
 
