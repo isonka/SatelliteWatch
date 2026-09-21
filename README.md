@@ -103,7 +103,7 @@ Mirror mapping is lossy vs SpaceX: engine count/type/version is not on the launc
 ```bash
 xcodebuild -project SatelliteWatch.xcodeproj \
   -scheme SatelliteWatch \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
   test
 ```
 
