@@ -15,7 +15,7 @@ final class LaunchRocketViewModel {
     private(set) var state: State
 
     private let rocketID: String?
-    private var service: (any SpaceXServiceProtocol)?
+    private var service: (any ServiceProtocol)?
 
     init(launch: Launch) {
         rocketID = launch.rocket?.id
@@ -30,7 +30,7 @@ final class LaunchRocketViewModel {
         }
     }
 
-    func loadIfNeeded(using service: any SpaceXServiceProtocol) async {
+    func loadIfNeeded(using service: any ServiceProtocol) async {
         self.service = service
         guard state == .idle else { return }
         await load()

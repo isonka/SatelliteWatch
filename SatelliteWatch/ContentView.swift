@@ -8,7 +8,7 @@ struct ContentView: View {
     @State private var launchesPath = NavigationPath()
     @State private var rocketsPath = NavigationPath()
 
-    init(service: any SpaceXServiceProtocol) {
+    init(service: any ServiceProtocol) {
         _launchesViewModel = State(initialValue: LaunchesViewModel(service: service))
         _rocketsViewModel = State(initialValue: PaginatedListViewModel(service: service))
     }
@@ -94,7 +94,7 @@ struct ContentView: View {
 }
 
 private struct DetailDestinations: ViewModifier {
-    let service: any SpaceXServiceProtocol
+    let service: any ServiceProtocol
     let launchesViewModel: LaunchesViewModel
 
     func body(content: Content) -> some View {

@@ -1,6 +1,6 @@
 import Foundation
 
-struct LaunchLibraryAPIClient: SpaceXServiceProtocol {
+struct LaunchLibraryAPIClient: ServiceProtocol {
     private let http: HTTPClient
     private let rocketCache: RocketIDCache
 

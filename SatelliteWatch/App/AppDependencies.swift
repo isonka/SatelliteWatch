@@ -11,7 +11,7 @@ final class AppDependencies {
         }
     }
 
-    private(set) var spaceXService: any SpaceXServiceProtocol
+    private(set) var spaceXService: any ServiceProtocol
 
     init(dataSourceMode: DataSourceMode? = nil) {
         #if DEBUG
@@ -36,7 +36,7 @@ final class AppDependencies {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     #endif
 
-    private static func makeService(for mode: DataSourceMode) -> any SpaceXServiceProtocol {
+    private static func makeService(for mode: DataSourceMode) -> any ServiceProtocol {
         switch mode {
         case .live:
             SpaceXAPIClient()

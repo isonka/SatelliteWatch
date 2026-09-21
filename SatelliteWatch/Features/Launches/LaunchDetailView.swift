@@ -2,11 +2,11 @@ import SwiftUI
 
 struct LaunchDetailView: View {
     let launch: Launch
-    let service: any SpaceXServiceProtocol
+    let service: any ServiceProtocol
 
     @State private var rocketViewModel: LaunchRocketViewModel
 
-    init(launch: Launch, service: any SpaceXServiceProtocol) {
+    init(launch: Launch, service: any ServiceProtocol) {
         self.launch = launch
         self.service = service
         _rocketViewModel = State(initialValue: LaunchRocketViewModel(launch: launch))

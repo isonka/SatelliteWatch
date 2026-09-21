@@ -1,6 +1,6 @@
 import Foundation
 
-struct MockSpaceXService: SpaceXServiceProtocol {
+struct MockSpaceXService: ServiceProtocol {
     static var previewLaunches: [Launch] { sampleLaunches }
     static var previewRocket: Rocket { sampleRocket }
 
@@ -104,8 +104,8 @@ private extension MockSpaceXService {
                 datePrecision: .hour,
                 links: LaunchLinks(
                     patch: .init(
-                        small: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png",
-                        large: "https://images2.imgbox.com/a9/9a/NXVkTST8_o.png"
+                        small: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREofow3jHyl-4BTmXcxPPc76_PUm4inuy7o4qC7e9R2g",
+                        large: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREofow3jHyl-4BTmXcxPPc76_PUm4inuy7o4qC7e9R2g"
                     ),
                     webcast: "https://youtu.be/J442-ti-Dhg",
                     wikipedia: nil,

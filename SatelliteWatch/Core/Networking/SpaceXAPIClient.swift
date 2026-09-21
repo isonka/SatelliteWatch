@@ -1,6 +1,6 @@
 import Foundation
 
-struct SpaceXAPIClient: SpaceXServiceProtocol {
+struct SpaceXAPIClient: ServiceProtocol {
     private let http: HTTPClient
 
     init(http: HTTPClient = HTTPClient()) {

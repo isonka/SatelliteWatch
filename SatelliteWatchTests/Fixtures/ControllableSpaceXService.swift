@@ -2,7 +2,7 @@ import Foundation
 import os
 @testable import SatelliteWatch
 
-final class ControllableSpaceXService: SpaceXServiceProtocol, @unchecked Sendable {
+final class ControllableSpaceXService: ServiceProtocol, @unchecked Sendable {
     private struct Scripted<Value>: @unchecked Sendable {
         let result: Result<Value, Error>
         let gate: TestGate?

@@ -41,7 +41,7 @@ final class LaunchesViewModel: PaginatedListViewModel<Launch> {
             <= Calendar.current.startOfDay(for: draftEndDate)
     }
 
-    init(service: any SpaceXServiceProtocol, pageSize: Int = 20) {
+    init(service: any ServiceProtocol, pageSize: Int = 20) {
         let filterBox = FilterBox()
         self.filterBox = filterBox
         super.init(pageSize: pageSize) { @MainActor page, limit in

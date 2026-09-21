@@ -1,6 +1,6 @@
 import Foundation
 
-protocol SpaceXServiceProtocol: Sendable {
+protocol ServiceProtocol: Sendable {
     func fetchLaunches(
         page: Int,
         limit: Int,

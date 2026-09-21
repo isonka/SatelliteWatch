@@ -145,7 +145,7 @@ class PaginatedListViewModel<Item: Identifiable & Decodable & Sendable> where It
 }
 
 extension PaginatedListViewModel where Item == Rocket {
-    convenience init(service: any SpaceXServiceProtocol, pageSize: Int = 20) {
+    convenience init(service: any ServiceProtocol, pageSize: Int = 20) {
         self.init(pageSize: pageSize) { page, limit in
             try await service.fetchRockets(page: page, limit: limit)
         }
